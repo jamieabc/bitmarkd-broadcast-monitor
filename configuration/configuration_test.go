@@ -130,3 +130,25 @@ func TestLogging(t *testing.T) {
 
 	assert.Equal(t, expected, logConfig, ("wrong log config"))
 }
+
+func TestNodesConfig(t *testing.T) {
+	setupConfigurationTestFile()
+	defer teardownTestFile()
+
+	node1 := configuration.Node{
+		AddressIPv4: "127.0.0.1:1234",
+		PublicKey:   "abcdef",
+	}
+
+	node2 := configuration.Node{
+		AddressIPv4: "127.0.0.1:5678",
+		PublicKey:   "wxyz",
+	}
+
+	config, _ := configuration.Parse(testFile)
+	nodes := config.NodesConfig()
+
+	assert.Equal(t, 2, len(nodes), "wrong nodes count")
+	assert.Equal(t, node1, nodes[0], "wrong node1")
+	assert.Equal(t, node2, nodes[1], "wrong node2")
+}

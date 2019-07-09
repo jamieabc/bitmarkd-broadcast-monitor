@@ -16,6 +16,7 @@ import (
 type Configuration interface {
 	Data() *ConfigurationImpl
 	LogConfig() logger.Configuration
+	NodesConfig() []Node
 	String() string
 }
 
@@ -75,6 +76,10 @@ func (c *ConfigurationImpl) Data() *ConfigurationImpl {
 
 func (c *ConfigurationImpl) LogConfig() logger.Configuration {
 	return c.Logging
+}
+
+func (c *ConfigurationImpl) NodesConfig() []Node {
+	return c.Nodes
 }
 
 func (c *ConfigurationImpl) String() string {
