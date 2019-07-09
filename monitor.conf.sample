@@ -12,8 +12,28 @@ M.nodes = {
 }
 
 M.keys = {
-  public = "1111",
-  private = "2222",
+  public = "PUBLIC:1111",
+  private = "PRIVATE:2222",
+}
+
+-- configure global or specific logger channel levels
+M.logging = {
+    size = 1048576,
+    count = 100,
+    directory = "log",
+
+    -- set to true to log to console
+    console = false,
+
+    -- set the logging level for various modules
+    -- modules not overridden with get the value from DEFAULT
+    -- the default value for DEFAULT is "critical"
+    levels = {
+        DEFAULT = "error",
+
+        -- some specific logging channels: (there may be others)
+        -- submission = "info",
+    }
 }
 
 return M
