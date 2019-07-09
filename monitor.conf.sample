@@ -1,0 +1,19 @@
+local M = {}
+
+M.nodes = {
+  {
+    address_ipv4 = "127.0.0.1:1234",
+    public_key = "abcdef",
+  },
+  {
+    address_ipv4 = "127.0.0.1:5678",
+    public_key = "wxyz",
+  },
+}
+
+M.keys = {
+  public = "1111",
+  private = "2222",
+}
+
+return M
