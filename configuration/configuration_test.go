@@ -11,6 +11,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/bitmark-inc/logger"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/configuration"
 	"github.com/stretchr/testify/assert"
 )
@@ -32,9 +33,20 @@ M.nodes = {
     public_key = "wxyz",
   },
 }
+
 M.keys = {
   public = "1111",
   private = "2222",
+}
+
+M.logging = {
+    size = 8888,
+    directory = "log",
+    count = 10,
+    console = false,
+    levels = {
+        DEFAULT = "error",
+    },
 }
 return M
 `)
@@ -97,4 +109,24 @@ func TestString(t *testing.T) {
 	assert.Contains(t, actual, "abcdef", "wrong node 1 public key")
 	assert.Contains(t, actual, "127.0.0.1:5678", "wrong node 2 address")
 	assert.Contains(t, actual, "wxyz", "wrong node 2 public key")
+}
+
+func TestLogging(t *testing.T) {
+	setupConfigurationTestFile()
+	defer teardownTestFile()
+
+	config, _ := configuration.Parse(testFile)
+	logConfig := config.LogConfig()
+
+	expected := logger.Configuration{
+		Size:      8888,
+		Directory: "log",
+		Count:     10,
+		Console:   false,
+		Levels: map[string]string{
+			"DEFAULT": "error",
+		},
+	}
+
+	assert.Equal(t, expected, logConfig, ("wrong log config"))
 }

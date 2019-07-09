@@ -15,6 +15,7 @@ import (
 
 type Configuration interface {
 	Data() *ConfigurationImpl
+	LogConfig() logger.Configuration
 	String() string
 }
 
@@ -70,6 +71,10 @@ func Parse(configFile string) (Configuration, error) {
 
 func (c *ConfigurationImpl) Data() *ConfigurationImpl {
 	return c
+}
+
+func (c *ConfigurationImpl) LogConfig() logger.Configuration {
+	return c.Logging
 }
 
 func (c *ConfigurationImpl) String() string {

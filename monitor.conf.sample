@@ -20,6 +20,7 @@ M.keys = {
 M.logging = {
     size = 1048576,
     count = 100,
+    directory = "log",
 
     -- set to true to log to console
     console = false,
