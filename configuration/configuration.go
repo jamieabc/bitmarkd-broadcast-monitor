@@ -11,17 +11,17 @@ import (
 type Configuration interface {
 	Data() *ConfigurationImpl
 	LogConfig() logger.Configuration
-	NodesConfig() []Node
+	NodesConfig() []NodeConfig
 	String() string
 }
 
 type ConfigurationImpl struct {
-	Nodes   []Node               `gluamapper:"nodes"`
+	Nodes   []NodeConfig         `gluamapper:"nodes"`
 	Keys    Keys                 `gluamapper:"keys"`
 	Logging logger.Configuration `gluamapper:"logging"`
 }
 
-type Node struct {
+type NodeConfig struct {
 	AddressIPv4 string `gluamapper:"address_ipv4" json:"address_ipv4"`
 	PublicKey   string `gluamapper:"public_key" json:"public_key"`
 }
@@ -65,18 +65,22 @@ func Parse(configFile string) (Configuration, error) {
 	return config, nil
 }
 
+// Data - return configuration
 func (c *ConfigurationImpl) Data() *ConfigurationImpl {
 	return c
 }
 
+// LogConfig - return log config
 func (c *ConfigurationImpl) LogConfig() logger.Configuration {
 	return c.Logging
 }
 
-func (c *ConfigurationImpl) NodesConfig() []Node {
+// NodesConfig - return nodes config
+func (c *ConfigurationImpl) NodesConfig() []NodeConfig {
 	return c.Nodes
 }
 
+// String - nodes info
 func (c *ConfigurationImpl) String() string {
 	var str strings.Builder
 	str.WriteString(fmt.Sprintf("Keys:\n\tpublic: \t%s\n\tprivate: \t%s\n", c.Keys.Public, c.Keys.Private))

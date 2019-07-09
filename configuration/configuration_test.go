@@ -69,12 +69,12 @@ func TestParse(t *testing.T) {
 	config, err := configuration.Parse(testFile)
 	actual := config.Data()
 
-	node1 := configuration.Node{
+	node1 := configuration.NodeConfig{
 		AddressIPv4: "127.0.0.1:1234",
 		PublicKey:   "abcdef",
 	}
 
-	node2 := configuration.Node{
+	node2 := configuration.NodeConfig{
 		AddressIPv4: "127.0.0.1:5678",
 		PublicKey:   "wxyz",
 	}
@@ -130,12 +130,12 @@ func TestNodesConfig(t *testing.T) {
 	setupConfigurationTestFile()
 	defer teardownTestFile()
 
-	node1 := configuration.Node{
+	node1 := configuration.NodeConfig{
 		AddressIPv4: "127.0.0.1:1234",
 		PublicKey:   "abcdef",
 	}
 
-	node2 := configuration.Node{
+	node2 := configuration.NodeConfig{
 		AddressIPv4: "127.0.0.1:5678",
 		PublicKey:   "wxyz",
 	}
