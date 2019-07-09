@@ -59,7 +59,8 @@ func TestParse(t *testing.T) {
 
 	assert := assert.New(t)
 
-	actual, err := configuration.Parse(testFile)
+	config, err := configuration.Parse(testFile)
+	actual := config.Data()
 
 	node1 := configuration.Node{
 		AddressIPv4: "127.0.0.1:1234",
@@ -81,4 +82,19 @@ func TestParse(t *testing.T) {
 	assert.Equal(2, len(actual.Nodes), "wrong nodes")
 	assert.Equal(node1, actual.Nodes[0], "different node info")
 	assert.Equal(node2, actual.Nodes[1], "different node info")
+}
+
+func TestString(t *testing.T) {
+	setupConfigurationTestFile()
+	defer teardownTestFile()
+
+	config, _ := configuration.Parse(testFile)
+	actual := config.String()
+
+	assert.Contains(t, actual, "1111", "wrong public key")
+	assert.Contains(t, actual, "2222", "wrong private key")
+	assert.Contains(t, actual, "127.0.0.1:1234", "wrong node 1 address")
+	assert.Contains(t, actual, "abcdef", "wrong node 1 public key")
+	assert.Contains(t, actual, "127.0.0.1:5678", "wrong node 2 address")
+	assert.Contains(t, actual, "wxyz", "wrong node 2 public key")
 }
