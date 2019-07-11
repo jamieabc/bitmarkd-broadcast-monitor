@@ -46,19 +46,13 @@ func Initialise(config configuration.NodeConfig, keys configuration.Keys, log *l
 		log:    log,
 	}
 
-	publicKey, err := zmqutil.ReadPublicKey(keys.Public)
+	publicKey, privateKey, err := parseKeys(keys)
 	if nil != err {
-		log.Errorf("read public key: %q, error: %s", keys.Public, err)
+		log.Errorf("parse keys: %v with error: %s", keys, err)
 		return nil, err
 	}
-	log.Debugf("read public key: %q", publicKey)
 
-	privateKey, err := zmqutil.ReadPrivateKey(keys.Private)
-	if nil != err {
-		log.Errorf("read private key: %q, error: %s", keys.Private)
-		return nil, err
-	}
-	log.Debugf("read private key: %q", privateKey)
+	log.Debugf("public key: %q, private key: %q", publicKey, privateKey)
 
 	address, err := util.NewConnection(config.AddressIPv4)
 	if nil != err {
@@ -67,31 +61,30 @@ func Initialise(config configuration.NodeConfig, keys configuration.Keys, log *l
 	}
 	log.Debugf("new connection address: %s", address)
 
-	serverPublicKey, err := hex.DecodeString(config.PublicKey)
+	remotePublicKey, err := hex.DecodeString(config.PublicKey)
 	if nil != err {
-		log.Errorf("node public key: %q, error: %s", config.PublicKey, err)
+		log.Errorf("remote public key: %q, error: %s", config.PublicKey, err)
 		return nil, err
 	}
-	log.Debugf("server public key: %q", serverPublicKey)
+	log.Debugf("server public key: %q", remotePublicKey)
 
-	if bytes.Equal(publicKey, serverPublicKey) {
-		log.Errorf("node public key: %q, error: %s", publicKey, err)
+	if bytes.Equal(publicKey, remotePublicKey) {
+		log.Errorf("remote and local public key: %q same , error: %s", publicKey, err)
 		return nil, err
 	}
 
 	client, err := zmqutil.NewClient(zmq.SUB, privateKey, publicKey, 0)
+	if nil != err {
+		log.Errorf("node address: %q, error: %s", address, err)
+		return nil, err
+	}
 	defer func() {
 		if nil != err && nil != client {
 			zmqutil.CloseClients([]*zmqutil.Client{client})
 		}
 	}()
 
-	if nil != err {
-		log.Errorf("node address: %q, error: %s", address, err)
-		return nil, err
-	}
-
-	err = client.Connect(address, serverPublicKey, config.Chain)
+	err = client.Connect(address, remotePublicKey, config.Chain)
 	if nil != err {
 		log.Errorf("node connect to %q, error: %s", address, err)
 		return nil, err
@@ -101,6 +94,20 @@ func Initialise(config configuration.NodeConfig, keys configuration.Keys, log *l
 	n.client = client
 
 	return n, err
+}
+
+func parseKeys(keys configuration.Keys) ([]byte, []byte, error) {
+	publicKey, err := zmqutil.ReadPublicKey(keys.Public)
+	if nil != err {
+		return nil, nil, err
+	}
+
+	privateKey, err := zmqutil.ReadPrivateKey(keys.Private)
+	if nil != err {
+		return nil, nil, err
+	}
+
+	return publicKey, privateKey, nil
 }
 
 // Run - run go routines
@@ -153,12 +160,11 @@ loop:
 				break loop
 			default:
 				data, err := s.RecvMessageBytes(0)
-				log.Debugf("receive chain %s broadcast message", data[0])
 				if nil != err {
 					log.Errorf("receive error: %s", err)
 					continue
 				}
-				process(node, data[1:], node.Client())
+				process(node, data, node.Client())
 			}
 		}
 	}
@@ -172,22 +178,23 @@ loop:
 
 func process(node Node, data [][]byte, client *zmqutil.Client) {
 	log := node.Log()
-	log.Info("incomfing message")
+	chain := data[0]
 
-	switch d := data[0]; string(d) {
+	switch d := data[1]; string(d) {
 	case "block":
-		log.Debugf("receive block: %x", data[1])
-		header, digest, _, err := blockrecord.ExtractHeader(data[1])
+		log.Debugf("block: %x", chain, data[2])
+		header, digest, _, err := blockrecord.ExtractHeader(data[2])
 		if nil != err {
 			log.Errorf("extract header with error: %s", err)
 			return
 		}
-		log.Infof("receive block %d, previous block %s, digest: %s", header.Number, header.PreviousBlock.String(), digest.String())
+		log.Infof("receive chain %s, block %d, previous block %s, digest: %s", chain, header.Number, header.PreviousBlock.String(), digest.String())
 
 	case "heart":
 		log.Infof("receive heartbeat")
+
 	default:
-		log.Debugf("receive category: %s", d)
+		log.Debugf("receive %s", d)
 	}
 }
 
