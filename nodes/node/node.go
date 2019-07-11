@@ -209,7 +209,13 @@ func process(node Node, data [][]byte, client *zmqutil.Client) {
 			log.Errorf("extract header with error: %s", err)
 			return
 		}
-		log.Infof("receive chain %s, block %d, previous block %s, digest: %s", chain, header.Number, header.PreviousBlock.String(), digest.String())
+
+		log.Infof("receive chain %s, block %d, previous block %s, digest: %s",
+			chain,
+			header.Number,
+			header.PreviousBlock.String(),
+			digest.String(),
+		)
 
 	case "heart":
 		log.Infof("receive heartbeat")
@@ -219,30 +225,37 @@ func process(node Node, data [][]byte, client *zmqutil.Client) {
 	}
 }
 
+// Client - get zmq client
 func (n *NodeImpl) Client() *zmqutil.Client {
 	return n.client
 }
 
+// CloseConnection - close connection
 func (n *NodeImpl) CloseConnection() {
 	n.client.Close()
 }
 
+// DropRate - drop rate
 func (n *NodeImpl) DropRate() {
 	return
 }
 
+// Log - get logger
 func (n *NodeImpl) Log() *logger.L {
 	return n.log
 }
 
+// Monitor - start to monitor
 func (n *NodeImpl) Monitor() {
 	return
 }
 
+// StopMonitor - stop monitor
 func (n *NodeImpl) StopMonitor() {
 	return
 }
 
+// Verify - verify record data
 func (n *NodeImpl) Verify() {
 	return
 }
