@@ -124,6 +124,7 @@ func TestLogging(t *testing.T) {
 		Directory: "log",
 		Count:     10,
 		Console:   false,
+		File:      "monitor.log",
 		Levels: map[string]string{
 			"DEFAULT": "error",
 		},
