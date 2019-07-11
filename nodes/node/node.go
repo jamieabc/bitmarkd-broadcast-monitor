@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/blockrecord"
 	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
@@ -153,7 +154,7 @@ loop:
 				break loop
 			default:
 				data, err := s.RecvMessageBytes(0)
-				log.Debugf("receive broadcast message: %v", data)
+				log.Debugf("receive chain %s broadcast message", data[0])
 				if nil != err {
 					log.Errorf("receive error: %s", err)
 					continue
@@ -174,9 +175,20 @@ func process(node Node, data [][]byte, client *zmqutil.Client) {
 	log := node.Log()
 	log.Info("incomfing message")
 
-	switch d := data[0]; d {
+	switch d := data[0]; string(d) {
+	case "block":
+		log.Debugf("receive block: %x", data[1])
+		header, digest, _, err := blockrecord.ExtractHeader(data[1])
+		if nil != err {
+			log.Errorf("extract header with error: %s", err)
+			return
+		}
+		log.Infof("receive block %d, previous block %s, digest: %s", header.Number, header.PreviousBlock.String(), digest.String())
+
+	case "heart":
+		log.Infof("receive heartbeat")
 	default:
-		log.Infof("receive category: %s", d)
+		log.Debugf("receive category: %s", d)
 	}
 }
 
