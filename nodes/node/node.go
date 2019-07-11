@@ -18,7 +18,7 @@ type Node interface {
 	DropRate()
 	Log() *logger.L
 	Monitor()
-	SetSenderAndReceiver(*zmq.Socket, *zmq.Socket)
+	setSenderAndReceiver(*zmq.Socket, *zmq.Socket)
 	StopMonitor()
 	StopReceiver()
 	StopSender()
@@ -127,7 +127,7 @@ func receiveLoop(node Node) {
 		log.Errorf("create signal pair error: %s", err)
 		return
 	}
-	node.SetSenderAndReceiver(sender, receiver)
+	node.setSenderAndReceiver(sender, receiver)
 
 	poller := zmqutil.NewPoller()
 	client := node.Client()
@@ -200,7 +200,7 @@ func (n *NodeImpl) Monitor() {
 	return
 }
 
-func (n *NodeImpl) SetSenderAndReceiver(sender *zmq.Socket, receiver *zmq.Socket) {
+func (n *NodeImpl) setSenderAndReceiver(sender *zmq.Socket, receiver *zmq.Socket) {
 	n.sender = sender
 	n.receiver = receiver
 }
