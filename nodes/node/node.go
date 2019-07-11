@@ -53,6 +53,7 @@ func Initialise() error {
 	return err
 }
 
+// NewNode - create new node
 func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int) (intf Node, err error) {
 	log := logger.New(fmt.Sprintf("node-%d", idx))
 
@@ -138,7 +139,15 @@ loop:
 
 	n.Log().Info("stop")
 
-	StopSender()
+	stopSender()
+}
+
+func stopSender() {
+	_, err := sender.SendMessage("stop")
+	if nil != err {
+		logger.Criticalf("send stop message with error: %s", err)
+	}
+	sender.Close()
 }
 
 func receiveLoop(node Node) {
@@ -177,11 +186,15 @@ loop:
 		}
 	}
 
-	StopReceiver()
+	stopReceiver()
 	node.CloseConnection()
 	log.Flush()
 
 	return
+}
+
+func stopReceiver() {
+	receiver.Close()
 }
 
 func process(node Node, data [][]byte, client *zmqutil.Client) {
@@ -204,15 +217,6 @@ func process(node Node, data [][]byte, client *zmqutil.Client) {
 	default:
 		log.Debugf("receive %s", d)
 	}
-}
-
-func StopReceiver() {
-	receiver.Close()
-}
-
-func StopSender() {
-	sender.SendMessage("stop")
-	sender.Close()
 }
 
 func (n *NodeImpl) Client() *zmqutil.Client {
