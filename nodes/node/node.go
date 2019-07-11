@@ -90,7 +90,6 @@ func Initialise(config configuration.NodeConfig, keys configuration.Keys, log *l
 		log.Errorf("node address: %q, error: %s", address, err)
 		return nil, err
 	}
-	log.Debugf("zmq client: %s", client.String())
 
 	err = client.Connect(address, serverPublicKey, config.Chain)
 	if nil != err {
