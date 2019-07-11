@@ -203,7 +203,7 @@ func process(node Node, data [][]byte, client *zmqutil.Client) {
 
 	switch d := data[1]; string(d) {
 	case "block":
-		log.Debugf("block: %x", chain, data[2])
+		log.Debugf("block: %x", data[2])
 		header, digest, _, err := blockrecord.ExtractHeader(data[2])
 		if nil != err {
 			log.Errorf("extract header with error: %s", err)
