@@ -3,6 +3,7 @@ package node
 import (
 	"bytes"
 	"encoding/hex"
+	"fmt"
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
@@ -19,19 +20,15 @@ type Node interface {
 	DropRate()
 	Log() *logger.L
 	Monitor()
-	setSenderAndReceiver(*zmq.Socket, *zmq.Socket)
 	StopMonitor()
-	StopReceiver()
-	StopSender()
 	Verify()
 }
 
 type NodeImpl struct {
-	config   configuration.NodeConfig
-	log      *logger.L
-	client   *zmqutil.Client
-	sender   *zmq.Socket
-	receiver *zmq.Socket
+	config configuration.NodeConfig
+	client *zmqutil.Client
+	id     int
+	log    *logger.L
 }
 
 const (
@@ -39,10 +36,29 @@ const (
 	signal                   = "inproc://bitmarkd-broadcast-monitor-signal"
 )
 
-// Initialise - initialise node
-func Initialise(config configuration.NodeConfig, keys configuration.Keys, log *logger.L) (intf Node, err error) {
+var (
+	sender   *zmq.Socket
+	receiver *zmq.Socket
+)
+
+// Initialise - initialise node settings
+func Initialise() error {
+	var err error
+	sender, receiver, err = zmqutil.NewSignalPair(signal)
+	if nil != err {
+		logger.Panic("create signal pair error")
+		return err
+	}
+
+	return err
+}
+
+func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int) (intf Node, err error) {
+	log := logger.New(fmt.Sprintf("node-%d", idx))
+
 	n := &NodeImpl{
 		config: config,
+		id:     idx,
 		log:    log,
 	}
 
@@ -93,7 +109,7 @@ func Initialise(config configuration.NodeConfig, keys configuration.Keys, log *l
 
 	n.client = client
 
-	return n, err
+	return n, nil
 }
 
 func parseKeys(keys configuration.Keys) ([]byte, []byte, error) {
@@ -120,26 +136,18 @@ loop:
 		break loop
 	}
 
-	log := n.Log()
-	log.Info("stop")
+	n.Log().Info("stop")
 
-	n.StopSender()
+	StopSender()
 }
 
 func receiveLoop(node Node) {
-	log := node.Log()
-
-	sender, receiver, err := zmqutil.NewSignalPair(signal)
-	if nil != err {
-		log.Errorf("create signal pair error: %s", err)
-		return
-	}
-	node.setSenderAndReceiver(sender, receiver)
-
 	poller := zmqutil.NewPoller()
 	client := node.Client()
 	_ = client.BeginPolling(poller, zmq.POLLIN)
 	poller.Add(receiver, zmq.POLLIN)
+
+	log := node.Log()
 
 loop:
 	for {
@@ -169,7 +177,7 @@ loop:
 		}
 	}
 
-	node.StopReceiver()
+	StopReceiver()
 	node.CloseConnection()
 	log.Flush()
 
@@ -177,8 +185,8 @@ loop:
 }
 
 func process(node Node, data [][]byte, client *zmqutil.Client) {
-	log := node.Log()
 	chain := data[0]
+	log := node.Log()
 
 	switch d := data[1]; string(d) {
 	case "block":
@@ -196,6 +204,15 @@ func process(node Node, data [][]byte, client *zmqutil.Client) {
 	default:
 		log.Debugf("receive %s", d)
 	}
+}
+
+func StopReceiver() {
+	receiver.Close()
+}
+
+func StopSender() {
+	sender.SendMessage("stop")
+	sender.Close()
 }
 
 func (n *NodeImpl) Client() *zmqutil.Client {
@@ -216,24 +233,6 @@ func (n *NodeImpl) Log() *logger.L {
 
 func (n *NodeImpl) Monitor() {
 	return
-}
-
-func (n *NodeImpl) setSenderAndReceiver(sender *zmq.Socket, receiver *zmq.Socket) {
-	n.sender = sender
-	n.receiver = receiver
-}
-
-func (n *NodeImpl) StopReceiver() {
-	n.receiver.Close()
-}
-
-func (n *NodeImpl) StopSender() {
-	n.log.Debug("stop sender")
-	_, err := n.sender.SendMessage("stop")
-	if nil != err {
-		n.log.Errorf("send message with error: %s", err)
-	}
-	n.sender.Close()
 }
 
 func (n *NodeImpl) StopMonitor() {
