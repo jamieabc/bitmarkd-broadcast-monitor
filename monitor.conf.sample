@@ -12,8 +12,8 @@ M.nodes = {
 }
 
 M.keys = {
-  public = "1111",
-  private = "2222",
+  public = "PUBLIC:1111",
+  private = "PRIVATE:2222",
 }
 
 -- configure global or specific logger channel levels

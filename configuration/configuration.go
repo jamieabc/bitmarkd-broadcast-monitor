@@ -12,6 +12,7 @@ type Configuration interface {
 	Data() *ConfigurationImpl
 	LogConfig() logger.Configuration
 	NodesConfig() []NodeConfig
+	Key() Keys
 	String() string
 }
 
@@ -23,6 +24,7 @@ type ConfigurationImpl struct {
 
 type NodeConfig struct {
 	AddressIPv4 string `gluamapper:"address_ipv4" json:"address_ipv4"`
+	Chain       string `gluamapper:"chain"`
 	PublicKey   string `gluamapper:"public_key" json:"public_key"`
 }
 
@@ -33,13 +35,14 @@ type Keys struct {
 
 var (
 	defaultLogging = logger.Configuration{
-		Size:    1048576,
-		Count:   100,
-		Console: false,
+		Count:     100,
+		Console:   false,
+		Directory: "log",
+		File:      "monitor.log",
 		Levels: map[string]string{
 			logger.DefaultTag: "error",
 		},
-		Directory: "log",
+		Size: 1048576,
 	}
 )
 
@@ -50,9 +53,7 @@ func Parse(configFile string) (Configuration, error) {
 		return nil, err
 	}
 
-	directory, _ := filepath.Split(filePath)
-
-	fmt.Printf("dir: %s, file name: %s\n", directory, filePath)
+	// directory, _ := filepath.Split(filePath)
 
 	config := &ConfigurationImpl{
 		Logging: defaultLogging,
@@ -86,7 +87,13 @@ func (c *ConfigurationImpl) String() string {
 	str.WriteString(fmt.Sprintf("Keys:\n\tpublic: \t%s\n\tprivate: \t%s\n", c.Keys.Public, c.Keys.Private))
 	str.WriteString("nodes:\n")
 	for i, node := range c.Nodes {
-		str.WriteString(fmt.Sprintf("\tnode[%d]:\n\t\taddress: \t%s\n\t\tpublic key: \t%s\n", i, node.AddressIPv4, node.PublicKey))
+		str.WriteString(fmt.Sprintf("\tnode[%d]:\n\t\taddress: \t%s\n\t\tpublic key: \t%s\n\t\tchain: %s\n", i, node.AddressIPv4, node.PublicKey, node.Chain))
 	}
+	str.WriteString(fmt.Sprintf("logging: %+v\n", c.Logging))
 	return str.String()
+}
+
+// Key - return key
+func (c *ConfigurationImpl) Key() Keys {
+	return c.Keys
 }
