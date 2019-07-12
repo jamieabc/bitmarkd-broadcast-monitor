@@ -1,6 +1,7 @@
 package records
 
 import (
+	"sync"
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
@@ -23,6 +24,7 @@ type block struct {
 }
 
 type RecordsImpl struct {
+	sync.Mutex
 	heartbeats   [recordSize]time.Time
 	blocks       [recordSize]block
 	blockIdx     int
@@ -39,6 +41,9 @@ func Initialise() Records {
 
 // AddHeartbeat - add heartbeat record
 func (r *RecordsImpl) AddHeartbeat(t time.Time) {
+	r.Lock()
+	defer r.Unlock()
+
 	r.heartbeats[r.heartbeatIdx] = t
 	r.heartbeatIdx = nextIdx(r.heartbeatIdx)
 }
@@ -57,12 +62,19 @@ func (r *RecordsImpl) AddBlock(height uint64, digest blockdigest.Digest) {
 		height: height,
 		digest: digest,
 	}
+
+	r.Lock()
+	defer r.Unlock()
+
 	r.blocks[r.blockIdx] = b
 	r.blockIdx = nextIdx(r.blockIdx)
 }
 
 // HeartbeatSummary - heartbeat summary of duration and count
 func (r *RecordsImpl) HeartbeatSummary() (time.Duration, uint16) {
+	r.Lock()
+	defer r.Unlock()
+
 	max := r.heartbeats[0]
 	maxIdx := 0
 	count := uint16(0)
@@ -99,6 +111,10 @@ func (r *RecordsImpl) minHeartbeatTimeAt(idx int) time.Time {
 // HighestBlock - highest block height
 func (r *RecordsImpl) HighestBlock() uint64 {
 	highest := uint64(0)
+
+	r.Lock()
+	defer r.Unlock()
+
 	for i := 0; i < recordSize; i++ {
 		if (block{}) == r.blocks[i] {
 			break
