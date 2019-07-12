@@ -29,14 +29,12 @@ type RecordsImpl struct {
 	blocks       [recordSize]block
 	blockIdx     int
 	heartbeatIdx int
+	highestBlock uint64
 }
 
 // Initialise - initialise
 func Initialise() Records {
-	return &RecordsImpl{
-		blockIdx:     0,
-		heartbeatIdx: 0,
-	}
+	return &RecordsImpl{}
 }
 
 // AddHeartbeat - add heartbeat record
@@ -68,6 +66,9 @@ func (r *RecordsImpl) AddBlock(height uint64, digest blockdigest.Digest) {
 
 	r.blocks[r.blockIdx] = b
 	r.blockIdx = nextIdx(r.blockIdx)
+	if r.highestBlock < height {
+		r.highestBlock = height
+	}
 }
 
 // HeartbeatSummary - heartbeat summary of duration and count
@@ -110,21 +111,5 @@ func (r *RecordsImpl) minHeartbeatTimeAt(idx int) time.Time {
 
 // HighestBlock - highest block height
 func (r *RecordsImpl) HighestBlock() uint64 {
-	highest := uint64(0)
-
-	r.Lock()
-	defer r.Unlock()
-
-	for i := 0; i < recordSize; i++ {
-		if (block{}) == r.blocks[i] {
-			break
-		}
-
-		if highest <= r.blocks[i].height {
-			highest = r.blocks[i].height
-		} else {
-			break
-		}
-	}
-	return highest
+	return r.highestBlock
 }
