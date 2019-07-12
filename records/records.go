@@ -14,7 +14,7 @@ const (
 type Records interface {
 	AddHeartbeat(time.Time)
 	AddBlock(uint64, blockdigest.Digest)
-	HighestBlock() uint64
+	BlockSummary() uint64
 	HeartbeatSummary() (time.Duration, uint16)
 }
 
@@ -71,6 +71,11 @@ func (r *RecordsImpl) AddBlock(height uint64, digest blockdigest.Digest) {
 	}
 }
 
+// BlockSummary - return highest block
+func (r *RecordsImpl) BlockSummary() uint64 {
+	return r.highestBlock
+}
+
 // HeartbeatSummary - heartbeat summary of duration and count
 func (r *RecordsImpl) HeartbeatSummary() (time.Duration, uint16) {
 	r.Lock()
@@ -107,9 +112,4 @@ func (r *RecordsImpl) minHeartbeatTimeAt(idx int) time.Time {
 		return r.heartbeats[next]
 	}
 	return r.heartbeats[0]
-}
-
-// HighestBlock - highest block height
-func (r *RecordsImpl) HighestBlock() uint64 {
-	return r.highestBlock
 }

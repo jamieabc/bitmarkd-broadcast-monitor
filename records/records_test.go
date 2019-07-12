@@ -21,7 +21,7 @@ var (
 func TestInitialise(t *testing.T) {
 	r := records.Initialise()
 
-	highestBlock := r.HighestBlock()
+	highestBlock := r.BlockSummary()
 	duration, count := r.HeartbeatSummary()
 
 	assert.Equal(t, uint64(0), highestBlock, "wrong initial highest block number")
@@ -29,33 +29,33 @@ func TestInitialise(t *testing.T) {
 	assert.Equal(t, uint16(0), count, "wrong initial heartbeat count")
 }
 
-func TestHighestBlockWhenNoCycle(t *testing.T) {
+func TestBlockSummaryWhenNoCycle(t *testing.T) {
 	r := records.Initialise()
 	r.AddBlock(uint64(100), defaultDigest)
 	r.AddBlock(uint64(101), defaultDigest)
 	r.AddBlock(uint64(102), defaultDigest)
 
-	highestBlockNumber := r.HighestBlock()
+	highestBlockNumber := r.BlockSummary()
 	assert.Equal(t, uint64(102), highestBlockNumber, "wrong highest block number")
 }
 
-func TestHighestBlockWhenEdge(t *testing.T) {
+func TestBlockSummaryWhenEdge(t *testing.T) {
 	r := records.Initialise()
 	for i := 0; i < 40; i++ {
 		r.AddBlock(uint64(i), defaultDigest)
 	}
 
-	highestBlockNumber := r.HighestBlock()
+	highestBlockNumber := r.BlockSummary()
 	assert.Equal(t, uint64(39), highestBlockNumber, "wrong highest block number")
 }
 
-func TestHighestBlockWhenCycle(t *testing.T) {
+func TestBlockSummaryWhenCycle(t *testing.T) {
 	r := records.Initialise()
 	for i := 0; i < 50; i++ {
 		r.AddBlock(uint64(i), defaultDigest)
 	}
 
-	highestBlockNumber := r.HighestBlock()
+	highestBlockNumber := r.BlockSummary()
 	assert.Equal(t, uint64(49), highestBlockNumber, "wrong highest block number")
 }
 
