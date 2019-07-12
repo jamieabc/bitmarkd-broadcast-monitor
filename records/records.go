@@ -18,7 +18,7 @@ type Records interface {
 }
 
 type block struct {
-	number uint64
+	height uint64
 	digest blockdigest.Digest
 }
 
@@ -52,9 +52,9 @@ func nextIdx(idx int) int {
 }
 
 // AddBlock - add block record
-func (r *RecordsImpl) AddBlock(number uint64, digest blockdigest.Digest) {
+func (r *RecordsImpl) AddBlock(height uint64, digest blockdigest.Digest) {
 	b := block{
-		number: number,
+		height: height,
 		digest: digest,
 	}
 	r.blocks[r.blockIdx] = b
@@ -96,12 +96,18 @@ func (r *RecordsImpl) minHeartbeatTimeAt(idx int) time.Time {
 	return r.heartbeats[0]
 }
 
-// HighestBlock - highest block number
+// HighestBlock - highest block height
 func (r *RecordsImpl) HighestBlock() uint64 {
 	highest := uint64(0)
 	for i := 0; i < recordSize; i++ {
-		if (block{}) != r.blocks[i] && (highest < r.blocks[i].number) {
-			highest = r.blocks[i].number
+		if (block{}) == r.blocks[i] {
+			break
+		}
+
+		if highest <= r.blocks[i].height {
+			highest = r.blocks[i].height
+		} else {
+			break
 		}
 	}
 	return highest

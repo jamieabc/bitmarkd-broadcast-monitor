@@ -39,6 +39,16 @@ func TestHighestBlockWhenNoCycle(t *testing.T) {
 	assert.Equal(t, uint64(102), highestBlockNumber, "wrong highest block number")
 }
 
+func TestHighestBlockWhenEdge(t *testing.T) {
+	r := records.Initialise()
+	for i := 0; i < 40; i++ {
+		r.AddBlock(uint64(i), defaultDigest)
+	}
+
+	highestBlockNumber := r.HighestBlock()
+	assert.Equal(t, uint64(39), highestBlockNumber, "wrong highest block number")
+}
+
 func TestHighestBlockWhenCycle(t *testing.T) {
 	r := records.Initialise()
 	for i := 0; i < 50; i++ {
@@ -68,6 +78,18 @@ func TestHeartbeatSummaryWhenEnough(t *testing.T) {
 
 	assert.Equal(t, time.Duration(14)*time.Second, duration, "wrong duration")
 	assert.Equal(t, uint16(15), count, "wrong heartbeat count")
+}
+
+func TestHeartbeatSummaryWhenEdge(t *testing.T) {
+	r := records.Initialise()
+	now := time.Now()
+	for i := 0; i < 40; i++ {
+		r.AddHeartbeat(now.Add(time.Duration(i) * time.Second))
+	}
+	duration, count := r.HeartbeatSummary()
+
+	assert.Equal(t, time.Duration(39)*time.Second, duration, "wrong duration")
+	assert.Equal(t, uint16(40), count, "wrong heartbeat count")
 }
 
 func TestHeartbeatSummaryWhenCycle(t *testing.T) {
