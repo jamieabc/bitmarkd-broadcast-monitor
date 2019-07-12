@@ -7,10 +7,7 @@ import (
 )
 
 const (
-	heartbeatRecorderdSize  = 40
-	blockRecorderdSize      = 40
-	minHeartbeatsForSummary = 10
-	minBlocksForSummary     = 10
+	recordSize = 40
 )
 
 type Records interface {
@@ -26,8 +23,8 @@ type block struct {
 }
 
 type RecordsImpl struct {
-	heartbeats   [heartbeatRecorderdSize]time.Time
-	blocks       [blockRecorderdSize]block
+	heartbeats   [recordSize]time.Time
+	blocks       [recordSize]block
 	blockIdx     int
 	heartbeatIdx int
 }
@@ -43,14 +40,14 @@ func Initialise() Records {
 // AddHeartbeat - add heartbeat record
 func (r *RecordsImpl) AddHeartbeat(t time.Time) {
 	r.heartbeats[r.heartbeatIdx] = t
-	r.nextHeartbeatIdx()
+	r.heartbeatIdx = nextIdx(r.heartbeatIdx)
 }
 
-func (r *RecordsImpl) nextHeartbeatIdx() {
-	if r.heartbeatIdx == heartbeatRecorderdSize-1 {
-		r.heartbeatIdx = 0
+func nextIdx(idx int) int {
+	if recordSize-1 == idx {
+		return 0
 	} else {
-		r.heartbeatIdx++
+		return idx + 1
 	}
 }
 
@@ -61,33 +58,28 @@ func (r *RecordsImpl) AddBlock(number uint64, digest blockdigest.Digest) {
 		digest: digest,
 	}
 	r.blocks[r.blockIdx] = b
-	r.nextBlockIdx()
-}
-
-func (r *RecordsImpl) nextBlockIdx() {
-	if r.blockIdx == blockRecorderdSize-1 {
-		r.blockIdx = 0
-	} else {
-		r.blockIdx++
-	}
+	r.blockIdx = nextIdx(r.blockIdx)
 }
 
 // HeartbeatSummary - heartbeat summary of duration and count
 func (r *RecordsImpl) HeartbeatSummary() (time.Duration, uint16) {
-	max, min := r.heartbeats[0], r.heartbeats[0]
+	max := r.heartbeats[0]
+	maxIdx := 0
 	count := uint16(0)
 
-	for i := 0; i < heartbeatRecorderdSize; i++ {
+	for i := 0; i < recordSize; i++ {
 		if (time.Time{}) != r.heartbeats[i] {
 			count++
 			if r.heartbeats[i].After(max) {
 				max = r.heartbeats[i]
+				maxIdx = i
 			}
-			if r.heartbeats[i].Before(max) {
-				min = r.heartbeats[i]
-			}
+		} else {
+			break
 		}
 	}
+
+	min := r.minHeartbeatTimeAt(maxIdx)
 
 	if (time.Time{}) == max || (time.Time{}) == min {
 		return time.Duration(0), count
@@ -96,10 +88,18 @@ func (r *RecordsImpl) HeartbeatSummary() (time.Duration, uint16) {
 	return max.Sub(min), count
 }
 
+func (r *RecordsImpl) minHeartbeatTimeAt(idx int) time.Time {
+	next := nextIdx(idx)
+	if (time.Time{}) != r.heartbeats[next] {
+		return r.heartbeats[next]
+	}
+	return r.heartbeats[0]
+}
+
 // HighestBlock - highest block number
 func (r *RecordsImpl) HighestBlock() uint64 {
 	highest := uint64(0)
-	for i := 0; i < blockRecorderdSize; i++ {
+	for i := 0; i < recordSize; i++ {
 		if (block{}) != r.blocks[i] && (highest < r.blocks[i].number) {
 			highest = r.blocks[i].number
 		}
