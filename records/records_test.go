@@ -18,8 +18,8 @@ var (
 	}
 )
 
-func TestInitialise(t *testing.T) {
-	r := records.Initialise()
+func TestNew(t *testing.T) {
+	r := records.New()
 
 	highestBlock := r.BlockSummary()
 	duration, count := r.HeartbeatSummary()
@@ -30,7 +30,7 @@ func TestInitialise(t *testing.T) {
 }
 
 func TestBlockSummaryWhenNoCycle(t *testing.T) {
-	r := records.Initialise()
+	r := records.New()
 	r.AddBlock(uint64(100), defaultDigest)
 	r.AddBlock(uint64(101), defaultDigest)
 	r.AddBlock(uint64(102), defaultDigest)
@@ -40,7 +40,7 @@ func TestBlockSummaryWhenNoCycle(t *testing.T) {
 }
 
 func TestBlockSummaryWhenEdge(t *testing.T) {
-	r := records.Initialise()
+	r := records.New()
 	for i := 0; i < 40; i++ {
 		r.AddBlock(uint64(i), defaultDigest)
 	}
@@ -50,7 +50,7 @@ func TestBlockSummaryWhenEdge(t *testing.T) {
 }
 
 func TestBlockSummaryWhenCycle(t *testing.T) {
-	r := records.Initialise()
+	r := records.New()
 	for i := 0; i < 50; i++ {
 		r.AddBlock(uint64(i), defaultDigest)
 	}
@@ -60,7 +60,7 @@ func TestBlockSummaryWhenCycle(t *testing.T) {
 }
 
 func TestHeartbeatSummaryWhenSingl(t *testing.T) {
-	r := records.Initialise()
+	r := records.New()
 	r.AddHeartbeat(time.Now())
 	duration, count := r.HeartbeatSummary()
 
@@ -69,7 +69,7 @@ func TestHeartbeatSummaryWhenSingl(t *testing.T) {
 }
 
 func TestHeartbeatSummaryWhenEnough(t *testing.T) {
-	r := records.Initialise()
+	r := records.New()
 	now := time.Now()
 	for i := 0; i < 15; i++ {
 		r.AddHeartbeat(now.Add(time.Duration(i) * time.Second))
@@ -81,7 +81,7 @@ func TestHeartbeatSummaryWhenEnough(t *testing.T) {
 }
 
 func TestHeartbeatSummaryWhenEdge(t *testing.T) {
-	r := records.Initialise()
+	r := records.New()
 	now := time.Now()
 	for i := 0; i < 40; i++ {
 		r.AddHeartbeat(now.Add(time.Duration(i) * time.Second))
@@ -93,7 +93,7 @@ func TestHeartbeatSummaryWhenEdge(t *testing.T) {
 }
 
 func TestHeartbeatSummaryWhenCycle(t *testing.T) {
-	r := records.Initialise()
+	r := records.New()
 	now := time.Now()
 	for i := 0; i < 50; i++ {
 		r.AddHeartbeat(now.Add(time.Duration(i) * time.Second))

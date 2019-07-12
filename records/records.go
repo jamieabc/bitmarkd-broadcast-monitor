@@ -32,8 +32,8 @@ type RecordsImpl struct {
 	highestBlock uint64
 }
 
-// Initialise - initialise
-func Initialise() Records {
+// New - new records
+func New() Records {
 	return &RecordsImpl{}
 }
 
