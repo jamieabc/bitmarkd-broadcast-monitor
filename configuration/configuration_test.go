@@ -20,12 +20,16 @@ func setupConfigurationTestFile() {
 local M = {}
 M.nodes = {
   {
-    address_ipv4 = "127.0.0.1:1234",
+    address_ipv4 = "127.0.0.1",
+    broadcast_port = "1234",
+    command_port = "4321",
     public_key = "abcdef",
     chain = "bitmark",
   },
   {
-    address_ipv4 = "127.0.0.1:5678",
+    address_ipv4 = "127.0.0.1",
+    broadcast_port = "5678",
+    command_port = "8765",
     public_key = "wxyz",
     chain = "testing",
   },
@@ -72,15 +76,19 @@ func TestParse(t *testing.T) {
 	actual := config.Data()
 
 	node1 := configuration.NodeConfig{
-		AddressIPv4: "127.0.0.1:1234",
-		PublicKey:   "abcdef",
-		Chain:       "bitmark",
+		AddressIPv4:   "127.0.0.1",
+		BroadcastPort: "1234",
+		CommandPort:   "4321",
+		PublicKey:     "abcdef",
+		Chain:         "bitmark",
 	}
 
 	node2 := configuration.NodeConfig{
-		AddressIPv4: "127.0.0.1:5678",
-		PublicKey:   "wxyz",
-		Chain:       "testing",
+		AddressIPv4:   "127.0.0.1",
+		BroadcastPort: "5678",
+		CommandPort:   "8765",
+		PublicKey:     "wxyz",
+		Chain:         "testing",
 	}
 
 	keys := configuration.Keys{
@@ -104,10 +112,14 @@ func TestString(t *testing.T) {
 
 	assert.Contains(t, actual, "1111", "wrong public key")
 	assert.Contains(t, actual, "2222", "wrong private key")
-	assert.Contains(t, actual, "127.0.0.1:1234", "wrong node 1 address")
+	assert.Contains(t, actual, "127.0.0.1", "wrong node 1 address")
+	assert.Contains(t, actual, "1234", "wrong node 1 broadcast port")
+	assert.Contains(t, actual, "4321", "wrong node 1 command port")
 	assert.Contains(t, actual, "abcdef", "wrong node 1 public key")
 	assert.Contains(t, actual, "bitmark", "wrong node 1 chain")
-	assert.Contains(t, actual, "127.0.0.1:5678", "wrong node 2 address")
+	assert.Contains(t, actual, "127.0.0.1", "wrong node 2 address")
+	assert.Contains(t, actual, "5678", "wrong node 2 broadcast port")
+	assert.Contains(t, actual, "8765", "wrong node 2 command port")
 	assert.Contains(t, actual, "wxyz", "wrong node 2 public key")
 	assert.Contains(t, actual, "testing", "wrong node 2 chain")
 }
@@ -138,15 +150,19 @@ func TestNodesConfig(t *testing.T) {
 	defer teardownTestFile()
 
 	node1 := configuration.NodeConfig{
-		AddressIPv4: "127.0.0.1:1234",
-		PublicKey:   "abcdef",
-		Chain:       "bitmark",
+		AddressIPv4:   "127.0.0.1",
+		BroadcastPort: "1234",
+		CommandPort:   "4321",
+		PublicKey:     "abcdef",
+		Chain:         "bitmark",
 	}
 
 	node2 := configuration.NodeConfig{
-		AddressIPv4: "127.0.0.1:5678",
-		PublicKey:   "wxyz",
-		Chain:       "testing",
+		AddressIPv4:   "127.0.0.1",
+		BroadcastPort: "5678",
+		CommandPort:   "8765",
+		PublicKey:     "wxyz",
+		Chain:         "testing",
 	}
 
 	config, _ := configuration.Parse(testFile)

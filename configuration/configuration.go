@@ -23,9 +23,11 @@ type ConfigurationImpl struct {
 }
 
 type NodeConfig struct {
-	AddressIPv4 string `gluamapper:"address_ipv4" json:"address_ipv4"`
-	Chain       string `gluamapper:"chain"`
-	PublicKey   string `gluamapper:"public_key" json:"public_key"`
+	AddressIPv4   string `gluamapper:"address_ipv4"`
+	BroadcastPort string `gluamapper:"broadcast_port"`
+	CommandPort   string `gluamapper:"command_port"`
+	Chain         string `gluamapper:"chain"`
+	PublicKey     string `gluamapper:"public_key"`
 }
 
 type Keys struct {
@@ -87,7 +89,15 @@ func (c *ConfigurationImpl) String() string {
 	str.WriteString(fmt.Sprintf("Keys:\n\tpublic: \t%s\n\tprivate: \t%s\n", c.Keys.Public, c.Keys.Private))
 	str.WriteString("nodes:\n")
 	for i, node := range c.Nodes {
-		str.WriteString(fmt.Sprintf("\tnode[%d]:\n\t\taddress: \t%s\n\t\tpublic key: \t%s\n\t\tchain: %s\n", i, node.AddressIPv4, node.PublicKey, node.Chain))
+		str.WriteString(fmt.Sprintf(
+			"\tnode[%d]:\n\t\taddress: \t%s\n\t\tbroadcast port: %s\n\t\tcommand port: \t%s\n\t\tpublic key: \t%s\n\t\tchain: %s\n",
+			i,
+			node.AddressIPv4,
+			node.BroadcastPort,
+			node.CommandPort,
+			node.PublicKey,
+			node.Chain,
+		))
 	}
 	str.WriteString(fmt.Sprintf("logging: %+v\n", c.Logging))
 	return str.String()

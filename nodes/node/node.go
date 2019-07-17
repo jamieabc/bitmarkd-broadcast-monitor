@@ -71,7 +71,7 @@ func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int) 
 
 	log.Debugf("public key: %q, private key: %q", publicKey, privateKey)
 
-	address, err := util.NewConnection(config.AddressIPv4)
+	address, err := util.NewConnection(n.broadcastAddressAndPort(config))
 	if nil != err {
 		log.Errorf("node address: %q, error: %s", address, err)
 		return nil, err
@@ -125,6 +125,14 @@ func parseKeys(keys configuration.Keys) ([]byte, []byte, error) {
 	}
 
 	return publicKey, privateKey, nil
+}
+
+func (n *NodeImpl) broadcastAddressAndPort(config configuration.NodeConfig) string {
+	return fmt.Sprintf("%s:%s", config.AddressIPv4, config.BroadcastPort)
+}
+
+func (n *NodeImpl) commandAddressAndPort(config configuration.NodeConfig) string {
+	return fmt.Sprintf("%s:%s", config.AddressIPv4, config.CommandPort)
 }
 
 // Run - run go routines
