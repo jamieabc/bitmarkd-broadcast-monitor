@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
-	"github.com/bitmark-inc/bitmarkd/util"
 	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/configuration"
@@ -15,8 +14,9 @@ import (
 )
 
 type Node interface {
-	BroadcastReceiverClient() *zmqutil.Client
+	BroadcastReceiver() *zmqutil.Client
 	CloseConnection()
+	CommandSenderAndReceiver() *zmqutil.Client
 	DropRate()
 	Log() *logger.L
 	Monitor()
@@ -25,10 +25,10 @@ type Node interface {
 }
 
 type NodeImpl struct {
-	config                  configuration.NodeConfig
-	broadcastReceiverClient *zmqutil.Client
-	id                      int
-	log                     *logger.L
+	config configuration.NodeConfig
+	client NodeClient
+	id     int
+	log    *logger.L
 }
 
 type nodeKeys struct {
@@ -77,32 +77,10 @@ func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int) 
 
 	log.Debugf("public key: %q, private key: %q, remote public key: %q", nodeKey.public, nodeKey.private, nodeKey.remotePublic)
 
-	address, err := util.NewConnection(n.broadcastAddressAndPort(config))
+	n.client, err = newClient(config, nodeKey)
 	if nil != err {
-		log.Errorf("node address: %q, error: %s", address, err)
 		return nil, err
 	}
-	log.Debugf("new connection address: %s", address)
-
-	broadcastReceiverClient, err := zmqutil.NewClient(zmq.SUB, nodeKey.private, nodeKey.public, 0)
-	if nil != err {
-		log.Errorf("node address: %q, error: %s", address, err)
-		return nil, err
-	}
-	defer func() {
-		if nil != err && nil != broadcastReceiverClient {
-			zmqutil.CloseClients([]*zmqutil.Client{broadcastReceiverClient})
-		}
-	}()
-
-	err = broadcastReceiverClient.Connect(address, nodeKey.remotePublic, config.Chain)
-	if nil != err {
-		log.Errorf("node connect to %q, error: %s", address, err)
-		return nil, err
-	}
-	log.Infof("connect remote %s", broadcastReceiverClient.String())
-
-	n.broadcastReceiverClient = broadcastReceiverClient
 
 	return n, nil
 }
@@ -129,16 +107,16 @@ func parseKeys(keys configuration.Keys, remotePublickeyStr string) (*nodeKeys, e
 
 	return &nodeKeys{
 		private:      privateKey,
-		publicK:      publicKey,
+		public:       publicKey,
 		remotePublic: remotePublicKey,
 	}, nil
 }
 
-func (n *NodeImpl) broadcastAddressAndPort(config configuration.NodeConfig) string {
+func broadcastAddressAndPort(config configuration.NodeConfig) string {
 	return hostAndPort(config.AddressIPv4, config.BroadcastPort)
 }
 
-func (n *NodeImpl) commandAddressAndPort(config configuration.NodeConfig) string {
+func commandAddressAndPort(config configuration.NodeConfig) string {
 	return hostAndPort(config.AddressIPv4, config.CommandPort)
 }
 
@@ -171,8 +149,8 @@ func stopSender() {
 
 func receiveLoop(node Node) {
 	poller := zmqutil.NewPoller()
-	broadcastReceiverClient := node.BroadcastReceiverClient()
-	_ = broadcastReceiverClient.BeginPolling(poller, zmq.POLLIN)
+	broadcastReceiver := node.BroadcastReceiver()
+	_ = broadcastReceiver.BeginPolling(poller, zmq.POLLIN)
 	poller.Add(receiver, zmq.POLLIN)
 
 	log := node.Log()
@@ -200,7 +178,7 @@ loop:
 					log.Errorf("receive error: %s", err)
 					continue
 				}
-				process(node, data, node.BroadcastReceiverClient())
+				process(node, data, node.BroadcastReceiver())
 			}
 		}
 	}
@@ -216,7 +194,7 @@ func stopReceiver() {
 	receiver.Close()
 }
 
-func process(node Node, data [][]byte, broadcastReceiverClient *zmqutil.Client) {
+func process(node Node, data [][]byte, broadcastReceiver *zmqutil.Client) {
 	chain := data[0]
 	log := node.Log()
 
@@ -245,13 +223,18 @@ func process(node Node, data [][]byte, broadcastReceiverClient *zmqutil.Client) 
 }
 
 // BroadcastReceiverClient - get zmq broadcast receiver client
-func (n *NodeImpl) BroadcastReceiverClient() *zmqutil.Client {
-	return n.broadcastReceiverClient
+func (n *NodeImpl) BroadcastReceiver() *zmqutil.Client {
+	return n.client.BroadcastReceiver()
+}
+
+func (n *NodeImpl) CommandSenderAndReceiver() *zmqutil.Client {
+	return n.client.CommandSenderAndReceiver()
 }
 
 // CloseConnection - close connection
 func (n *NodeImpl) CloseConnection() {
-	n.broadcastReceiverClient.Close()
+	n.client.CloseBroadcastReceiver()
+	n.client.CloseCommandSenderAndReceiver()
 }
 
 // DropRate - drop rate
