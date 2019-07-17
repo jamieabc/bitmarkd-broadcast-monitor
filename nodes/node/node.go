@@ -128,11 +128,15 @@ func parseKeys(keys configuration.Keys) ([]byte, []byte, error) {
 }
 
 func (n *NodeImpl) broadcastAddressAndPort(config configuration.NodeConfig) string {
-	return fmt.Sprintf("%s:%s", config.AddressIPv4, config.BroadcastPort)
+	return hostAndPort(config.AddressIPv4, config.BroadcastPort)
 }
 
 func (n *NodeImpl) commandAddressAndPort(config configuration.NodeConfig) string {
-	return fmt.Sprintf("%s:%s", config.AddressIPv4, config.CommandPort)
+	return hostAndPort(config.AddressIPv4, config.CommandPort)
+}
+
+func hostAndPort(host string, port string) string {
+	return fmt.Sprintf("%s:%s", host, port)
 }
 
 // Run - run go routines
