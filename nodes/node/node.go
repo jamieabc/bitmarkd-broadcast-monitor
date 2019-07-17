@@ -31,6 +31,12 @@ type NodeImpl struct {
 	log                     *logger.L
 }
 
+type nodeKeys struct {
+	private      []byte
+	public       []byte
+	remotePublic []byte
+}
+
 const (
 	receiveBroadcastInterval = 120 * time.Second
 	signal                   = "inproc://bitmarkd-broadcast-monitor-signal"
@@ -63,13 +69,13 @@ func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int) 
 		log:    log,
 	}
 
-	publicKey, privateKey, err := parseKeys(keys)
+	nodeKey, err := parseKeys(keys, config.PublicKey)
 	if nil != err {
-		log.Errorf("parse keys: %v with error: %s", keys, err)
+		log.Errorf("parse keys: %v, remote public key: %q with error: %s", keys, config.PublicKey, err)
 		return nil, err
 	}
 
-	log.Debugf("public key: %q, private key: %q", publicKey, privateKey)
+	log.Debugf("public key: %q, private key: %q, remote public key: %q", nodeKey.public, nodeKey.private, nodeKey.remotePublic)
 
 	address, err := util.NewConnection(n.broadcastAddressAndPort(config))
 	if nil != err {
@@ -78,19 +84,7 @@ func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int) 
 	}
 	log.Debugf("new connection address: %s", address)
 
-	remotePublicKey, err := hex.DecodeString(config.PublicKey)
-	if nil != err {
-		log.Errorf("remote public key: %q, error: %s", config.PublicKey, err)
-		return nil, err
-	}
-	log.Debugf("server public key: %q", remotePublicKey)
-
-	if bytes.Equal(publicKey, remotePublicKey) {
-		log.Errorf("remote and local public key: %q same , error: %s", publicKey, err)
-		return nil, err
-	}
-
-	broadcastReceiverClient, err := zmqutil.NewClient(zmq.SUB, privateKey, publicKey, 0)
+	broadcastReceiverClient, err := zmqutil.NewClient(zmq.SUB, nodeKey.private, nodeKey.public, 0)
 	if nil != err {
 		log.Errorf("node address: %q, error: %s", address, err)
 		return nil, err
@@ -101,7 +95,7 @@ func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int) 
 		}
 	}()
 
-	err = broadcastReceiverClient.Connect(address, remotePublicKey, config.Chain)
+	err = broadcastReceiverClient.Connect(address, nodeKey.remotePublic, config.Chain)
 	if nil != err {
 		log.Errorf("node connect to %q, error: %s", address, err)
 		return nil, err
@@ -113,18 +107,31 @@ func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int) 
 	return n, nil
 }
 
-func parseKeys(keys configuration.Keys) ([]byte, []byte, error) {
+func parseKeys(keys configuration.Keys, remotePublickeyStr string) (*nodeKeys, error) {
 	publicKey, err := zmqutil.ReadPublicKey(keys.Public)
 	if nil != err {
-		return nil, nil, err
+		return nil, err
 	}
 
 	privateKey, err := zmqutil.ReadPrivateKey(keys.Private)
 	if nil != err {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return publicKey, privateKey, nil
+	remotePublicKey, err := hex.DecodeString(remotePublickeyStr)
+	if nil != err {
+		return nil, err
+	}
+
+	if bytes.Equal(publicKey, remotePublicKey) {
+		return nil, fmt.Errorf("remote and local public key: %q same , error: %s", publicKey, err)
+	}
+
+	return &nodeKeys{
+		private:      privateKey,
+		publicK:      publicKey,
+		remotePublic: remotePublicKey,
+	}, nil
 }
 
 func (n *NodeImpl) broadcastAddressAndPort(config configuration.NodeConfig) string {
