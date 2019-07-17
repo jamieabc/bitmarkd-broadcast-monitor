@@ -126,7 +126,7 @@ func hostAndPort(host string, port string) string {
 
 // Run - run go routines
 func Run(n Node, shutdown <-chan struct{}) {
-	go receiveLoop(n)
+	go receiverLoop(n)
 
 loop:
 	select {
@@ -139,15 +139,7 @@ loop:
 	stopSender()
 }
 
-func stopSender() {
-	_, err := sender.SendMessage("stop")
-	if nil != err {
-		logger.Criticalf("send stop message with error: %s", err)
-	}
-	sender.Close()
-}
-
-func receiveLoop(node Node) {
+func receiverLoop(node Node) {
 	poller := zmqutil.NewPoller()
 	broadcastReceiver := node.BroadcastReceiver()
 	_ = broadcastReceiver.BeginPolling(poller, zmq.POLLIN)
@@ -192,6 +184,14 @@ loop:
 
 func stopReceiver() {
 	receiver.Close()
+}
+
+func stopSender() {
+	_, err := sender.SendMessage("stop")
+	if nil != err {
+		logger.Criticalf("send stop message with error: %s", err)
+	}
+	sender.Close()
 }
 
 func process(node Node, data [][]byte, broadcastReceiver *zmqutil.Client) {
