@@ -233,8 +233,7 @@ func (n *NodeImpl) CommandSenderAndReceiver() *zmqutil.Client {
 
 // CloseConnection - close connection
 func (n *NodeImpl) CloseConnection() {
-	n.client.CloseBroadcastReceiver()
-	n.client.CloseCommandSenderAndReceiver()
+	n.client.Close()
 }
 
 // DropRate - drop rate

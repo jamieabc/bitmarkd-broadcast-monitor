@@ -9,8 +9,7 @@ import (
 
 type NodeClient interface {
 	BroadcastReceiver() *zmqutil.Client
-	CloseBroadcastReceiver()
-	CloseCommandSenderAndReceiver()
+	Close()
 	CommandSenderAndReceiver() *zmqutil.Client
 }
 
@@ -65,15 +64,18 @@ func (c *NodeClientImpl) BroadcastReceiver() *zmqutil.Client {
 	return c.broadcastReceiver
 }
 
-// CloseBroadcastReceiver - close broadcast receiver client
-func (n *NodeClientImpl) CloseBroadcastReceiver() {
+func (n *NodeClientImpl) Close() {
+	n.closeBroadcastReceiver()
+	n.closeCommandSenderAndReceiver()
+}
+
+func (n *NodeClientImpl) closeBroadcastReceiver() {
 	if nil != n.broadcastReceiver {
 		n.broadcastReceiver.Close()
 	}
 }
 
-// CloseCommandSenderAndReceiver - close command sender and receiver client
-func (n *NodeClientImpl) CloseCommandSenderAndReceiver() {
+func (n *NodeClientImpl) closeCommandSenderAndReceiver() {
 	if nil != n.commandSenderAndReciever {
 		n.commandSenderAndReciever.Close()
 	}
