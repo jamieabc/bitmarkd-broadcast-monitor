@@ -40,4 +40,6 @@ M.logging = {
     }
 }
 
+M.heartbeat_interval_second = 60
+
 return M

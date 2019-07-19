@@ -49,6 +49,8 @@ M.logging = {
         DEFAULT = "error",
     },
 }
+
+M.heartbeat_interval_second = 60
 return M
 `)
 
@@ -122,6 +124,7 @@ func TestString(t *testing.T) {
 	assert.Contains(t, actual, "8765", "wrong node 2 command port")
 	assert.Contains(t, actual, "wxyz", "wrong node 2 public key")
 	assert.Contains(t, actual, "testing", "wrong node 2 chain")
+	assert.Contains(t, actual, "60", "wrong heartbeat interval")
 }
 
 func TestLogging(t *testing.T) {
@@ -186,4 +189,14 @@ func TestKey(t *testing.T) {
 	actual := config.Key()
 
 	assert.Equal(t, expected, actual, "wrong key")
+}
+
+func TestHeartbeatIntervalInSecond(t *testing.T) {
+	setupConfigurationTestFile()
+	defer teardownTestFile()
+
+	config, _ := configuration.Parse(testFile)
+	heartbeatInterval := config.HeartbeatIntervalInSecond()
+
+	assert.Equal(t, 60, heartbeatInterval, "wrong heartbeat interval")
 }

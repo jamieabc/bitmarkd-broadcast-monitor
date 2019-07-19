@@ -10,6 +10,7 @@ import (
 
 type Configuration interface {
 	Data() *ConfigurationImpl
+	HeartbeatIntervalInSecond() int
 	LogConfig() logger.Configuration
 	NodesConfig() []NodeConfig
 	Key() Keys
@@ -17,9 +18,10 @@ type Configuration interface {
 }
 
 type ConfigurationImpl struct {
-	Nodes   []NodeConfig         `gluamapper:"nodes"`
-	Keys    Keys                 `gluamapper:"keys"`
-	Logging logger.Configuration `gluamapper:"logging"`
+	Nodes                   []NodeConfig         `gluamapper:"nodes"`
+	Keys                    Keys                 `gluamapper:"keys"`
+	Logging                 logger.Configuration `gluamapper:"logging"`
+	HeartbeatIntervalSecond int                  `gluamapper:"heartbeat_interval_second"`
 }
 
 type NodeConfig struct {
@@ -34,6 +36,10 @@ type Keys struct {
 	Public  string `gluamapper:"public"`
 	Private string `gluamapper:"private"`
 }
+
+const (
+	defaultHeartbeatIntervalSecond = 60
+)
 
 var (
 	defaultLogging = logger.Configuration{
@@ -55,10 +61,9 @@ func Parse(configFile string) (Configuration, error) {
 		return nil, err
 	}
 
-	// directory, _ := filepath.Split(filePath)
-
 	config := &ConfigurationImpl{
-		Logging: defaultLogging,
+		Logging:                 defaultLogging,
+		HeartbeatIntervalSecond: defaultHeartbeatIntervalSecond,
 	}
 
 	if err := parseLuaConfigurationFile(filePath, config); nil != err {
@@ -99,6 +104,7 @@ func (c *ConfigurationImpl) String() string {
 			node.Chain,
 		))
 	}
+	str.WriteString(fmt.Sprintf("heartbeat interval: %d seconds\n", c.HeartbeatIntervalSecond))
 	str.WriteString(fmt.Sprintf("logging: %+v\n", c.Logging))
 	return str.String()
 }
@@ -106,4 +112,9 @@ func (c *ConfigurationImpl) String() string {
 // Key - return key
 func (c *ConfigurationImpl) Key() Keys {
 	return c.Keys
+}
+
+// HeartbeatIntervalInSecond - heartbeat interval in second
+func (c *ConfigurationImpl) HeartbeatIntervalInSecond() int {
+	return c.HeartbeatIntervalSecond
 }
