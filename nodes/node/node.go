@@ -19,7 +19,7 @@ type Node interface {
 	CommandSenderAndReceiver() *zmqutil.Client
 	DropRate()
 	Log() *logger.L
-	Monitor()
+	Monitor(<-chan struct{})
 	StopMonitor()
 	Verify()
 }
@@ -124,104 +124,6 @@ func hostAndPort(host string, port string) string {
 	return fmt.Sprintf("%s:%s", host, port)
 }
 
-// Run - run go routines
-func Run(n Node, shutdown <-chan struct{}) {
-	go receiverLoop(n)
-
-loop:
-	select {
-	case <-shutdown:
-		break loop
-	}
-
-	n.Log().Info("stop")
-
-	stopSender()
-}
-
-func receiverLoop(node Node) {
-	poller := zmqutil.NewPoller()
-	broadcastReceiver := node.BroadcastReceiver()
-	_ = broadcastReceiver.BeginPolling(poller, zmq.POLLIN)
-	poller.Add(receiver, zmq.POLLIN)
-
-	log := node.Log()
-
-loop:
-	for {
-		log.Debug("waiting to receive broadcast...")
-		polled, _ := poller.Poll(receiveBroadcastInterval)
-		if 0 == len(polled) {
-			log.Info("over heartbeat receive time")
-			continue
-		}
-		for _, p := range polled {
-			switch s := p.Socket; s {
-			case receiver:
-				_, err := s.RecvMessageBytes(0)
-				if nil != err {
-					log.Errorf("receive error: %s", err)
-				}
-				log.Debug("receive stop message")
-				break loop
-			default:
-				data, err := s.RecvMessageBytes(0)
-				if nil != err {
-					log.Errorf("receive error: %s", err)
-					continue
-				}
-				process(node, data, node.BroadcastReceiver())
-			}
-		}
-	}
-
-	stopReceiver()
-	node.CloseConnection()
-	log.Flush()
-
-	return
-}
-
-func stopReceiver() {
-	receiver.Close()
-}
-
-func stopSender() {
-	_, err := sender.SendMessage("stop")
-	if nil != err {
-		logger.Criticalf("send stop message with error: %s", err)
-	}
-	sender.Close()
-}
-
-func process(node Node, data [][]byte, broadcastReceiver *zmqutil.Client) {
-	chain := data[0]
-	log := node.Log()
-
-	switch d := data[1]; string(d) {
-	case "block":
-		log.Debugf("block: %x", data[2])
-		header, digest, _, err := blockrecord.ExtractHeader(data[2])
-		if nil != err {
-			log.Errorf("extract header with error: %s", err)
-			return
-		}
-
-		log.Infof("receive chain %s, block %d, previous block %s, digest: %s",
-			chain,
-			header.Number,
-			header.PreviousBlock.String(),
-			digest.String(),
-		)
-
-	case "heart":
-		log.Infof("receive heartbeat")
-
-	default:
-		log.Infof("receive %s", d)
-	}
-}
-
 // BroadcastReceiverClient - get zmq broadcast receiver client
 func (n *NodeImpl) BroadcastReceiver() *zmqutil.Client {
 	return n.client.BroadcastReceiver()
@@ -247,8 +149,102 @@ func (n *NodeImpl) Log() *logger.L {
 }
 
 // Monitor - start to monitor
-func (n *NodeImpl) Monitor() {
+func (n *NodeImpl) Monitor(shutdown <-chan struct{}) {
+	go n.receiverLoop()
+
+loop:
+	select {
+	case <-shutdown:
+		break loop
+	}
+
+	n.Log().Info("stop")
+
+	stopSender()
 	return
+}
+
+func (n *NodeImpl) receiverLoop() {
+	poller := zmqutil.NewPoller()
+	broadcastReceiver := n.BroadcastReceiver()
+	_ = broadcastReceiver.BeginPolling(poller, zmq.POLLIN)
+	poller.Add(receiver, zmq.POLLIN)
+
+	log := n.Log()
+
+loop:
+	for {
+		log.Debug("waiting to receive broadcast...")
+		polled, _ := poller.Poll(receiveBroadcastInterval)
+		if 0 == len(polled) {
+			log.Info("over heartbeat receive time")
+			continue
+		}
+		for _, p := range polled {
+			switch s := p.Socket; s {
+			case receiver:
+				_, err := s.RecvMessageBytes(0)
+				if nil != err {
+					log.Errorf("receive error: %s", err)
+				}
+				log.Debug("receive stop message")
+				break loop
+			default:
+				data, err := s.RecvMessageBytes(0)
+				if nil != err {
+					log.Errorf("receive error: %s", err)
+					continue
+				}
+				n.process(data)
+			}
+		}
+	}
+
+	stopReceiver()
+	n.CloseConnection()
+	log.Flush()
+
+	return
+}
+
+func (n *NodeImpl) process(data [][]byte) {
+	chain := data[0]
+	log := n.Log()
+
+	switch d := data[1]; string(d) {
+	case "block":
+		log.Debugf("block: %x", data[2])
+		header, digest, _, err := blockrecord.ExtractHeader(data[2])
+		if nil != err {
+			log.Errorf("extract header with error: %s", err)
+			return
+		}
+
+		log.Infof("receive chain %s, block %d, previous block %s, digest: %s",
+			chain,
+			header.Number,
+			header.PreviousBlock.String(),
+			digest.String(),
+		)
+
+	case "heart":
+		log.Infof("receive heartbeat")
+
+	default:
+		log.Infof("receive %s", d)
+	}
+}
+
+func stopReceiver() {
+	receiver.Close()
+}
+
+func stopSender() {
+	_, err := sender.SendMessage("stop")
+	if nil != err {
+		logger.Criticalf("send stop message with error: %s", err)
+	}
+	sender.Close()
 }
 
 // StopMonitor - stop monitor

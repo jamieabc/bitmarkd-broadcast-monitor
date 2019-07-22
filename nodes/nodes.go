@@ -56,7 +56,7 @@ func (n *NodesImpl) Monitor() {
 	nodeShutdown := make(chan struct{})
 	n.log.Info("start monitor")
 	for _, connectedNode := range n.nodes {
-		go node.Run(connectedNode, nodeShutdown)
+		go connectedNode.Monitor(nodeShutdown)
 	}
 
 	select {
