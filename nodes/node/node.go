@@ -149,7 +149,7 @@ func receiverLoop(node Node) {
 
 loop:
 	for {
-		log.Info("waiting to receive broadcast...")
+		log.Debug("waiting to receive broadcast...")
 		polled, _ := poller.Poll(receiveBroadcastInterval)
 		if 0 == len(polled) {
 			log.Info("over heartbeat receive time")
@@ -218,7 +218,7 @@ func process(node Node, data [][]byte, broadcastReceiver *zmqutil.Client) {
 		log.Infof("receive heartbeat")
 
 	default:
-		log.Debugf("receive %s", d)
+		log.Infof("receive %s", d)
 	}
 }
 
