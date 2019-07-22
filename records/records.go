@@ -1,6 +1,8 @@
 package records
 
 import (
+	"fmt"
+	"math"
 	"sync"
 	"time"
 
@@ -15,7 +17,7 @@ type Records interface {
 	AddHeartbeat(time.Time)
 	AddBlock(uint64, blockdigest.Digest)
 	BlockSummary() uint64
-	HeartbeatSummary() (time.Duration, uint16)
+	HeartbeatSummaryFromTime(time.Time) (time.Duration, uint16, float64)
 }
 
 type block struct {
@@ -25,16 +27,19 @@ type block struct {
 
 type RecordsImpl struct {
 	sync.Mutex
-	heartbeats   [recordSize]time.Time
-	blocks       [recordSize]block
-	blockIdx     int
-	heartbeatIdx int
-	highestBlock uint64
+	heartbeats              [recordSize]time.Time
+	blocks                  [recordSize]block
+	blockIdx                int
+	heartbeatIdx            int
+	heartbeatIntervalSecond float64
+	highestBlock            uint64
 }
 
 // New - new records
-func New() Records {
-	return &RecordsImpl{}
+func New(heartbeatIntervalSecond float64) Records {
+	return &RecordsImpl{
+		heartbeatIntervalSecond: heartbeatIntervalSecond,
+	}
 }
 
 // AddHeartbeat - add heartbeat record
@@ -76,40 +81,41 @@ func (r *RecordsImpl) BlockSummary() uint64 {
 	return r.highestBlock
 }
 
-// HeartbeatSummary - heartbeat summary of duration and count
-func (r *RecordsImpl) HeartbeatSummary() (time.Duration, uint16) {
+// HeartbeatSummary - heartbeat summary of duration, count, and droprate
+func (r *RecordsImpl) HeartbeatSummaryFromTime(durationEndTime time.Time) (time.Duration, uint16, float64) {
 	r.Lock()
 	defer r.Unlock()
 
-	max := r.heartbeats[0]
-	maxIdx := 0
+	min := r.heartbeats[0]
 	count := uint16(0)
 
 	for i := 0; i < recordSize; i++ {
 		if (time.Time{}) != r.heartbeats[i] {
 			count++
-			if r.heartbeats[i].After(max) {
-				max = r.heartbeats[i]
-				maxIdx = i
+			if r.heartbeats[i].Before(min) {
+				min = r.heartbeats[i]
 			}
 		} else {
 			break
 		}
 	}
 
-	min := r.minHeartbeatTimeAt(maxIdx)
-
-	if (time.Time{}) == max || (time.Time{}) == min {
-		return time.Duration(0), count
+	if (time.Time{}) == min || durationEndTime.Before(min) {
+		return time.Duration(0), count, float64(0)
 	}
 
-	return max.Sub(min), count
+	duration := durationEndTime.Sub(min)
+
+	return duration, count, r.droprate(duration, count)
 }
 
-func (r *RecordsImpl) minHeartbeatTimeAt(idx int) time.Time {
-	next := nextIdx(idx)
-	if (time.Time{}) != r.heartbeats[next] {
-		return r.heartbeats[next]
+func (r *RecordsImpl) droprate(duration time.Duration, actualReceived uint16) float64 {
+	expectedCount := math.Floor(duration.Seconds()/r.heartbeatIntervalSecond) + 1
+	fmt.Printf("expectedCount: %f\n", expectedCount)
+	fmt.Printf("actual recunt: %d\n", actualReceived)
+	if 0 == expectedCount {
+		return float64(0)
 	}
-	return r.heartbeats[0]
+
+	return (expectedCount - float64(actualReceived)) * 100 / expectedCount
 }
