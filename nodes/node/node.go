@@ -25,10 +25,11 @@ type Node interface {
 }
 
 type NodeImpl struct {
-	config configuration.NodeConfig
-	client NodeClient
-	id     int
-	log    *logger.L
+	config            configuration.NodeConfig
+	client            NodeClient
+	id                int
+	log               *logger.L
+	clientSenderTimer *time.Timer
 }
 
 type nodeKeys struct {
@@ -38,19 +39,20 @@ type nodeKeys struct {
 }
 
 const (
-	receiveBroadcastInterval = 120 * time.Second
-	signal                   = "inproc://bitmarkd-broadcast-monitor-signal"
+	receiveBroadcastIntervalInSecond = 120 * time.Second
+	senderCheckIntervalInSecond      = 10 * time.Second
+	signal                           = "inproc://bitmarkd-broadcast-monitor-signal"
 )
 
 var (
-	sender   *zmq.Socket
-	receiver *zmq.Socket
+	internalSignalSender   *zmq.Socket
+	internalSignalReceiver *zmq.Socket
 )
 
 // Initialise - initialise node settings
 func Initialise() error {
 	var err error
-	sender, receiver, err = zmqutil.NewSignalPair(signal)
+	internalSignalSender, internalSignalReceiver, err = zmqutil.NewSignalPair(signal)
 	if nil != err {
 		logger.Panic("create signal pair error")
 		return err
@@ -64,9 +66,10 @@ func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int) 
 	log := logger.New(fmt.Sprintf("node-%d", idx))
 
 	n := &NodeImpl{
-		config: config,
-		id:     idx,
-		log:    log,
+		config:            config,
+		id:                idx,
+		log:               log,
+		clientSenderTimer: time.NewTimer(time.Duration(senderCheckIntervalInSecond)),
 	}
 
 	nodeKey, err := parseKeys(keys, config.PublicKey)
@@ -151,6 +154,8 @@ func (n *NodeImpl) Log() *logger.L {
 // Monitor - start to monitor
 func (n *NodeImpl) Monitor(shutdown <-chan struct{}) {
 	go n.receiverLoop()
+	n.clientSenderTimer.Reset(senderCheckIntervalInSecond)
+	go n.senderLoop(shutdown)
 
 loop:
 	select {
@@ -160,7 +165,7 @@ loop:
 
 	n.Log().Info("stop")
 
-	stopSender()
+	stopInternalGoRoutines()
 	return
 }
 
@@ -168,21 +173,21 @@ func (n *NodeImpl) receiverLoop() {
 	poller := zmqutil.NewPoller()
 	broadcastReceiver := n.BroadcastReceiver()
 	_ = broadcastReceiver.BeginPolling(poller, zmq.POLLIN)
-	poller.Add(receiver, zmq.POLLIN)
+	poller.Add(internalSignalReceiver, zmq.POLLIN)
 
 	log := n.Log()
 
 loop:
 	for {
 		log.Debug("waiting to receive broadcast...")
-		polled, _ := poller.Poll(receiveBroadcastInterval)
+		polled, _ := poller.Poll(receiveBroadcastIntervalInSecond)
 		if 0 == len(polled) {
 			log.Info("over heartbeat receive time")
 			continue
 		}
 		for _, p := range polled {
 			switch s := p.Socket; s {
-			case receiver:
+			case internalSignalReceiver:
 				_, err := s.RecvMessageBytes(0)
 				if nil != err {
 					log.Errorf("receive error: %s", err)
@@ -200,7 +205,7 @@ loop:
 		}
 	}
 
-	stopReceiver()
+	stopInternalSignalReceiver()
 	n.CloseConnection()
 	log.Flush()
 
@@ -235,16 +240,36 @@ func (n *NodeImpl) process(data [][]byte) {
 	}
 }
 
-func stopReceiver() {
-	receiver.Close()
+func stopInternalSignalReceiver() {
+	internalSignalReceiver.Close()
 }
 
-func stopSender() {
-	_, err := sender.SendMessage("stop")
+func (n *NodeImpl) senderLoop(shutdown <-chan struct{}) {
+	log := n.Log()
+	for {
+		select {
+		case <-shutdown:
+			log.Infof("receive shutdown signal")
+			break
+		case <-n.clientSenderTimer.C:
+			log.Debug("get client info")
+			info, err := n.client.Info()
+			if nil != err {
+				log.Errorf("get client info error: %s", err)
+				log.Infof("client info: %v\n", info)
+			}
+			n.clientSenderTimer.Reset(senderCheckIntervalInSecond)
+		}
+	}
+	log.Infof("finish")
+}
+
+func stopInternalGoRoutines() {
+	_, err := internalSignalSender.SendMessage("stop")
 	if nil != err {
 		logger.Criticalf("send stop message with error: %s", err)
 	}
-	sender.Close()
+	internalSignalSender.Close()
 }
 
 // StopMonitor - stop monitor
