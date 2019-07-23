@@ -7,23 +7,22 @@ import (
 
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/util"
-	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/configuration"
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/network"
 	zmq "github.com/pebbe/zmq4"
 )
 
 type NodeClient interface {
-	BroadcastReceiver() *zmqutil.Client
+	BroadcastReceiver() *network.Client
 	Close()
-	CommandSenderAndReceiver() *zmqutil.Client
+	CommandSenderAndReceiver() *network.Client
 	DigestOfHeight(height uint64) (*blockdigest.Digest, error)
 	Info() (*clientStatus, error)
 }
 
 type NodeClientImpl struct {
-	broadcastReceiver        *zmqutil.Client
-	commandSenderAndReciever *zmqutil.Client
+	broadcastReceiver        *network.Client
+	commandSenderAndReciever *network.Client
 }
 
 type connectionInfo struct {
@@ -64,19 +63,19 @@ func newClient(config configuration.NodeConfig, nodeKey *nodeKeys) (NodeClient, 
 	}, nil
 }
 
-func newZmqClient(nodeKey *nodeKeys, info connectionInfo) (client *zmqutil.Client, err error) {
-	address, err := util.NewConnection(info.addressAndPort)
+func newZmqClient(nodeKey *nodeKeys, info connectionInfo) (client *network.Client, err error) {
+	address, err := network.NewConnection(info.addressAndPort)
 	if nil != err {
 		return nil, err
 	}
 
-	client, err = zmqutil.NewClient(info.zmqType, nodeKey.private, nodeKey.public, 0)
+	client, err = network.NewClient(info.zmqType, nodeKey.private, nodeKey.public, 0)
 	if nil != err {
 		return nil, err
 	}
 	defer func() {
 		if nil != err && nil != client {
-			zmqutil.CloseClients([]*zmqutil.Client{client})
+			network.CloseClients([]*network.Client{client})
 		}
 	}()
 
@@ -88,8 +87,20 @@ func newZmqClient(nodeKey *nodeKeys, info connectionInfo) (client *zmqutil.Clien
 	return client, nil
 }
 
+func broadcastAddressAndPort(config configuration.NodeConfig) string {
+	return hostAndPort(config.AddressIPv4, config.BroadcastPort)
+}
+
+func commandAddressAndPort(config configuration.NodeConfig) string {
+	return hostAndPort(config.AddressIPv4, config.CommandPort)
+}
+
+func hostAndPort(host string, port string) string {
+	return fmt.Sprintf("%s:%s", host, port)
+}
+
 // BroadcastReceiver - zmq client of broadcast receiver
-func (c *NodeClientImpl) BroadcastReceiver() *zmqutil.Client {
+func (c *NodeClientImpl) BroadcastReceiver() *network.Client {
 	return c.broadcastReceiver
 }
 
@@ -111,7 +122,7 @@ func (n *NodeClientImpl) closeCommandSenderAndReceiver() {
 }
 
 // CommandSenderAndReceiver - zmq client of command sender and receiver
-func (c *NodeClientImpl) CommandSenderAndReceiver() *zmqutil.Client {
+func (c *NodeClientImpl) CommandSenderAndReceiver() *network.Client {
 	return c.commandSenderAndReciever
 }
 

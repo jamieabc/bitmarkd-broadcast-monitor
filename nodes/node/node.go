@@ -7,16 +7,16 @@ import (
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
-	"github.com/bitmark-inc/bitmarkd/zmqutil"
 	"github.com/bitmark-inc/logger"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/configuration"
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/network"
 	zmq "github.com/pebbe/zmq4"
 )
 
 type Node interface {
-	BroadcastReceiver() *zmqutil.Client
+	BroadcastReceiver() *network.Client
 	CloseConnection()
-	CommandSenderAndReceiver() *zmqutil.Client
+	CommandSenderAndReceiver() *network.Client
 	DropRate()
 	Log() *logger.L
 	Monitor(<-chan struct{})
@@ -52,7 +52,7 @@ var (
 // Initialise - initialise node settings
 func Initialise() error {
 	var err error
-	internalSignalSender, internalSignalReceiver, err = zmqutil.NewSignalPair(signal)
+	internalSignalSender, internalSignalReceiver, err = network.NewSignalPair(signal)
 	if nil != err {
 		logger.Panic("create signal pair error")
 		return err
@@ -89,12 +89,12 @@ func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int) 
 }
 
 func parseKeys(keys configuration.Keys, remotePublickeyStr string) (*nodeKeys, error) {
-	publicKey, err := zmqutil.ReadPublicKey(keys.Public)
+	publicKey, err := network.ReadPublicKey(keys.Public)
 	if nil != err {
 		return nil, err
 	}
 
-	privateKey, err := zmqutil.ReadPrivateKey(keys.Private)
+	privateKey, err := network.ReadPrivateKey(keys.Private)
 	if nil != err {
 		return nil, err
 	}
@@ -115,24 +115,12 @@ func parseKeys(keys configuration.Keys, remotePublickeyStr string) (*nodeKeys, e
 	}, nil
 }
 
-func broadcastAddressAndPort(config configuration.NodeConfig) string {
-	return hostAndPort(config.AddressIPv4, config.BroadcastPort)
-}
-
-func commandAddressAndPort(config configuration.NodeConfig) string {
-	return hostAndPort(config.AddressIPv4, config.CommandPort)
-}
-
-func hostAndPort(host string, port string) string {
-	return fmt.Sprintf("%s:%s", host, port)
-}
-
 // BroadcastReceiverClient - get zmq broadcast receiver client
-func (n *NodeImpl) BroadcastReceiver() *zmqutil.Client {
+func (n *NodeImpl) BroadcastReceiver() *network.Client {
 	return n.client.BroadcastReceiver()
 }
 
-func (n *NodeImpl) CommandSenderAndReceiver() *zmqutil.Client {
+func (n *NodeImpl) CommandSenderAndReceiver() *network.Client {
 	return n.client.CommandSenderAndReceiver()
 }
 
@@ -170,7 +158,7 @@ loop:
 }
 
 func (n *NodeImpl) receiverLoop() {
-	poller := zmqutil.NewPoller()
+	poller := network.NewPoller()
 	broadcastReceiver := n.BroadcastReceiver()
 	_ = broadcastReceiver.BeginPolling(poller, zmq.POLLIN)
 	poller.Add(internalSignalReceiver, zmq.POLLIN)
