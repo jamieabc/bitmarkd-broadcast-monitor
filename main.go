@@ -1,22 +1,18 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/fault"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/network"
 
 	"github.com/bitmark-inc/logger"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/configuration"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/nodes"
-)
-
-const (
-	errEmptyConfigFile = "empty config file"
 )
 
 var (
@@ -80,13 +76,13 @@ func parseFlag() error {
 
 	if "" == configFile {
 		flag.Usage()
-		_, _ = fmt.Fprintf(os.Stderr, "\n%s\n", errEmptyConfigFile)
-		return errors.New(errEmptyConfigFile)
+		_, _ = fmt.Fprintf(os.Stderr, "\n%s\n", fault.InvalidEmptyConfigFile)
+		return fault.InvalidEmptyConfigFile
 	}
 
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
-		_, _ = fmt.Fprintf(os.Stderr, "config file: %s, err: %s\n", configFile, errEmptyConfigFile)
-		return errors.New(errEmptyConfigFile)
+		_, _ = fmt.Fprintf(os.Stderr, "config file: %s, err: %s\n", configFile, fault.InvalidEmptyConfigFile)
+		return fault.InvalidEmptyConfigFile
 	}
 
 	return nil
