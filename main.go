@@ -8,7 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/bitmark-inc/bitmarkd/zmqutil"
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/network"
+
 	"github.com/bitmark-inc/logger"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/configuration"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/nodes"
@@ -101,7 +102,7 @@ func initializeLogger(config configuration.Configuration) error {
 }
 
 func zmqAuth() error {
-	err := zmqutil.StartAuthentication()
+	err := network.StartAuthentication()
 	if nil != err {
 		fmt.Fprintf(os.Stderr, "zmq auth fail with error: %s\n", err)
 		return err
