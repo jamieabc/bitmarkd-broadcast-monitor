@@ -80,12 +80,12 @@ func parseFlag() error {
 
 	if "" == configFile {
 		flag.Usage()
-		fmt.Fprintf(os.Stderr, "\n%s\n", errEmptyConfigFile)
+		_, _ = fmt.Fprintf(os.Stderr, "\n%s\n", errEmptyConfigFile)
 		return errors.New(errEmptyConfigFile)
 	}
 
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr, "config file: %s, err: %s\n", configFile, errEmptyConfigFile)
+		_, _ = fmt.Fprintf(os.Stderr, "config file: %s, err: %s\n", configFile, errEmptyConfigFile)
 		return errors.New(errEmptyConfigFile)
 	}
 
@@ -95,7 +95,7 @@ func parseFlag() error {
 func initializeLogger(config configuration.Configuration) error {
 	err := logger.Initialise(config.LogConfig())
 	if nil != err {
-		fmt.Fprintf(os.Stderr, "\n%s\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "\n%s\n", err)
 		return err
 	}
 	return nil
@@ -104,7 +104,7 @@ func initializeLogger(config configuration.Configuration) error {
 func zmqAuth() error {
 	err := network.StartAuthentication()
 	if nil != err {
-		fmt.Fprintf(os.Stderr, "zmq auth fail with error: %s\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "zmq auth fail with error: %s\n", err)
 		return err
 	}
 	return nil

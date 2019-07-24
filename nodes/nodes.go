@@ -14,16 +14,16 @@ type Nodes interface {
 	StopMonitor()
 }
 
-type NodesImpl struct {
+type nodes struct {
 	sync.RWMutex
 	log      *logger.L
-	nodes    []node.Node
+	nodeArr  []node.Node
 	shutdown chan struct{}
 }
 
 // Initialise - initialise nodes
 func Initialise(configs []configuration.NodeConfig, keys configuration.Keys) (Nodes, error) {
-	nodes := []node.Node{}
+	var ns []node.Node
 	log := logger.New("nodes")
 
 	err := node.Initialise()
@@ -37,25 +37,25 @@ func Initialise(configs []configuration.NodeConfig, keys configuration.Keys) (No
 		if nil != err {
 			return nil, err
 		}
-		nodes = append(nodes, n)
+		ns = append(ns, n)
 	}
 
-	return &NodesImpl{
+	return &nodes{
 		log:      log,
-		nodes:    nodes,
+		nodeArr:  ns,
 		shutdown: make(chan struct{}),
 	}, nil
 }
 
 // DropRate - drop rate
-func (n *NodesImpl) DropRate() {
+func (n *nodes) DropRate() {
 }
 
 // Monitor - start monitor
-func (n *NodesImpl) Monitor() {
+func (n *nodes) Monitor() {
 	nodeShutdown := make(chan struct{})
 	n.log.Info("start monitor")
-	for _, connectedNode := range n.nodes {
+	for _, connectedNode := range n.nodeArr {
 		go connectedNode.Monitor(nodeShutdown)
 	}
 
@@ -72,7 +72,7 @@ func (n *NodesImpl) Monitor() {
 }
 
 // StopMonitor - stop monitor
-func (n *NodesImpl) StopMonitor() {
+func (n *nodes) StopMonitor() {
 	n.log.Infof("stop monitor")
 	n.shutdown <- struct{}{}
 	n.log.Flush()

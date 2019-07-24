@@ -4,9 +4,6 @@ import (
 	"time"
 
 	zmq "github.com/pebbe/zmq4"
-
-	"github.com/bitmark-inc/bitmarkd/util"
-	"github.com/bitmark-inc/logger"
 )
 
 // point at which to disconnect large message senders
@@ -32,78 +29,27 @@ func NewSignalPair(signal string) (reciever *zmq.Socket, sender *zmq.Socket, err
 	if nil != err {
 		return nil, nil, err
 	}
-	reciever.SetLinger(0)
+	_ = reciever.SetLinger(0)
 	err = reciever.Bind(signal)
 	if nil != err {
-		reciever.Close()
+		_ = reciever.Close()
 		return nil, nil, err
 	}
 
 	// PAIR Client, half of signalling channel
 	sender, err = zmq.NewSocket(zmq.PAIR)
-	if nil != err {
-		sender.Close()
+	if nil != err && nil != sender {
+		_ = sender.Close()
 		return nil, nil, err
 	}
-	sender.SetLinger(0)
+	_ = sender.SetLinger(0)
 	err = sender.Connect(signal)
 	if nil != err {
-		sender.Close()
+		_ = sender.Close()
 		return nil, nil, err
 	}
 
 	return reciever, sender, nil
-}
-
-// bind a list of addresses
-// creates up to 2 sockets for separate IPv4 and IPv6 traffic
-func NewBind(log *logger.L, socketType zmq.Type, zapDomain string, privateKey []byte, publicKey []byte, listen []*util.Connection) (*zmq.Socket, *zmq.Socket, error) {
-
-	socket4 := (*zmq.Socket)(nil) // IPv4 traffic
-	socket6 := (*zmq.Socket)(nil) // IPv6 traffic
-
-	err := error(nil)
-
-	// allocate IPv4 and IPv6 sockets
-	for i, address := range listen {
-		bindTo, v6 := address.CanonicalIPandPort("tcp://")
-		if v6 {
-			if nil == socket6 {
-				socket6, err = NewServerSocket(socketType, zapDomain, privateKey, publicKey, v6)
-			}
-		} else {
-			if nil == socket4 {
-				socket4, err = NewServerSocket(socketType, zapDomain, privateKey, publicKey, v6)
-			}
-		}
-		if nil != err {
-			goto fail
-		}
-
-		if v6 {
-			err = socket6.Bind(bindTo)
-		} else {
-			err = socket4.Bind(bindTo)
-		}
-		if nil != err {
-			log.Errorf("cannot bind[%d]: %q  error: %s", i, bindTo, err)
-			goto fail
-		}
-		log.Infof("bind[%d]: %q  IPv6: %v", i, bindTo, v6)
-
-	}
-	return socket4, socket6, nil
-
-	// if an error close any open sockets
-fail:
-	if nil != socket4 {
-		socket4.Close()
-	}
-	if nil != socket6 {
-		socket6.Close()
-	}
-	log.Errorf("socket error: %s", err)
-	return nil, nil, err
 }
 
 // create a socket suitable for a server side connection

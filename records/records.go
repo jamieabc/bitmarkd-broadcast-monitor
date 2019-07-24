@@ -25,7 +25,7 @@ type block struct {
 	digest blockdigest.Digest
 }
 
-type RecordsImpl struct {
+type records struct {
 	sync.Mutex
 	heartbeats              [recordSize]time.Time
 	blocks                  [recordSize]block
@@ -37,13 +37,13 @@ type RecordsImpl struct {
 
 // New - new records
 func New(heartbeatIntervalSecond float64) Records {
-	return &RecordsImpl{
+	return &records{
 		heartbeatIntervalSecond: heartbeatIntervalSecond,
 	}
 }
 
 // AddHeartbeat - add heartbeat record
-func (r *RecordsImpl) AddHeartbeat(t time.Time) {
+func (r *records) AddHeartbeat(t time.Time) {
 	r.Lock()
 	defer r.Unlock()
 
@@ -60,7 +60,7 @@ func nextIdx(idx int) int {
 }
 
 // AddBlock - add block record
-func (r *RecordsImpl) AddBlock(height uint64, digest blockdigest.Digest) {
+func (r *records) AddBlock(height uint64, digest blockdigest.Digest) {
 	b := block{
 		height: height,
 		digest: digest,
@@ -77,12 +77,12 @@ func (r *RecordsImpl) AddBlock(height uint64, digest blockdigest.Digest) {
 }
 
 // BlockSummary - return highest block
-func (r *RecordsImpl) BlockSummary() uint64 {
+func (r *records) BlockSummary() uint64 {
 	return r.highestBlock
 }
 
 // HeartbeatSummary - heartbeat summary of duration, count, and droprate
-func (r *RecordsImpl) HeartbeatSummaryFromTime(durationEndTime time.Time) (time.Duration, uint16, float64) {
+func (r *records) HeartbeatSummaryFromTime(durationEndTime time.Time) (time.Duration, uint16, float64) {
 	r.Lock()
 	defer r.Unlock()
 
@@ -109,7 +109,7 @@ func (r *RecordsImpl) HeartbeatSummaryFromTime(durationEndTime time.Time) (time.
 	return duration, count, r.droprate(duration, count)
 }
 
-func (r *RecordsImpl) droprate(duration time.Duration, actualReceived uint16) float64 {
+func (r *records) droprate(duration time.Duration, actualReceived uint16) float64 {
 	expectedCount := math.Floor(duration.Seconds()/r.heartbeatIntervalSecond) + 1
 	fmt.Printf("expectedCount: %f\n", expectedCount)
 	fmt.Printf("actual recunt: %d\n", actualReceived)

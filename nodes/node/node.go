@@ -15,7 +15,7 @@ import (
 
 type Node interface {
 	BroadcastReceiver() *network.Client
-	CloseConnection()
+	CloseConnection() error
 	CommandSenderAndReceiver() *network.Client
 	DropRate()
 	Log() *logger.L
@@ -24,9 +24,9 @@ type Node interface {
 	Verify()
 }
 
-type NodeImpl struct {
+type node struct {
 	config            configuration.NodeConfig
-	client            NodeClient
+	client            Client
 	id                int
 	log               *logger.L
 	clientSenderTimer *time.Timer
@@ -65,7 +65,7 @@ func Initialise() error {
 func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int) (intf Node, err error) {
 	log := logger.New(fmt.Sprintf("node-%d", idx))
 
-	n := &NodeImpl{
+	n := &node{
 		config:            config,
 		id:                idx,
 		log:               log,
@@ -116,31 +116,34 @@ func parseKeys(keys configuration.Keys, remotePublickeyStr string) (*nodeKeys, e
 }
 
 // BroadcastReceiverClient - get zmq broadcast receiver client
-func (n *NodeImpl) BroadcastReceiver() *network.Client {
+func (n *node) BroadcastReceiver() *network.Client {
 	return n.client.BroadcastReceiver()
 }
 
-func (n *NodeImpl) CommandSenderAndReceiver() *network.Client {
+func (n *node) CommandSenderAndReceiver() *network.Client {
 	return n.client.CommandSenderAndReceiver()
 }
 
 // CloseConnection - close connection
-func (n *NodeImpl) CloseConnection() {
-	n.client.Close()
+func (n *node) CloseConnection() error {
+	if err := n.client.Close(); nil != err {
+		return err
+	}
+	return nil
 }
 
 // DropRate - drop rate
-func (n *NodeImpl) DropRate() {
+func (n *node) DropRate() {
 	return
 }
 
 // Log - get logger
-func (n *NodeImpl) Log() *logger.L {
+func (n *node) Log() *logger.L {
 	return n.log
 }
 
 // Monitor - start to monitor
-func (n *NodeImpl) Monitor(shutdown <-chan struct{}) {
+func (n *node) Monitor(shutdown <-chan struct{}) {
 	go n.receiverLoop()
 	n.clientSenderTimer.Reset(senderCheckIntervalInSecond)
 	go n.senderLoop(shutdown)
@@ -157,7 +160,7 @@ loop:
 	return
 }
 
-func (n *NodeImpl) receiverLoop() {
+func (n *node) receiverLoop() {
 	poller := network.NewPoller()
 	broadcastReceiver := n.BroadcastReceiver()
 	_ = broadcastReceiver.BeginPolling(poller, zmq.POLLIN)
@@ -193,14 +196,18 @@ loop:
 		}
 	}
 
-	stopInternalSignalReceiver()
-	n.CloseConnection()
+	if err := stopInternalSignalReceiver(); nil != err {
+		log.Errorf("stop internal signal with error: %s", err)
+	}
+	if err := n.CloseConnection(); nil != err {
+		log.Errorf("close connection with error: %s", err)
+	}
 	log.Flush()
 
 	return
 }
 
-func (n *NodeImpl) process(data [][]byte) {
+func (n *node) process(data [][]byte) {
 	chain := data[0]
 	log := n.Log()
 
@@ -228,17 +235,21 @@ func (n *NodeImpl) process(data [][]byte) {
 	}
 }
 
-func stopInternalSignalReceiver() {
-	internalSignalReceiver.Close()
+func stopInternalSignalReceiver() error {
+	if err := internalSignalReceiver.Close(); nil != err {
+		return err
+	}
+	return nil
 }
 
-func (n *NodeImpl) senderLoop(shutdown <-chan struct{}) {
+func (n *node) senderLoop(shutdown <-chan struct{}) {
 	log := n.Log()
+loop:
 	for {
 		select {
 		case <-shutdown:
 			log.Infof("receive shutdown signal")
-			break
+			break loop
 		case <-n.clientSenderTimer.C:
 			log.Debug("get client info")
 			info, err := n.client.Info()
@@ -257,15 +268,17 @@ func stopInternalGoRoutines() {
 	if nil != err {
 		logger.Criticalf("send stop message with error: %s", err)
 	}
-	internalSignalSender.Close()
+	if err := internalSignalSender.Close(); nil != err {
+		logger.Criticalf("send stop to internal signal with error: %s", err)
+	}
 }
 
 // StopMonitor - stop monitor
-func (n *NodeImpl) StopMonitor() {
+func (n *node) StopMonitor() {
 	return
 }
 
 // Verify - verify record data
-func (n *NodeImpl) Verify() {
+func (n *node) Verify() {
 	return
 }

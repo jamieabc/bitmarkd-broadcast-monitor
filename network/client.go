@@ -475,11 +475,3 @@ func (client *Client) ConnectedTo() *Connected {
 		Server:  hex.EncodeToString(client.serverPublicKey),
 	}
 }
-
-// find the client corresponding to a socket
-func ClientFromSocket(socket *zmq.Socket) *Client {
-	globalClientData.Lock()
-	client := globalClientData.clients[socket]
-	globalClientData.Unlock()
-	return client
-}

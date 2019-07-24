@@ -65,7 +65,7 @@ func teardownTestFile() {
 		return
 	}
 
-	os.Remove(testFile)
+	_ = os.Remove(testFile)
 }
 
 func TestParse(t *testing.T) {
@@ -145,7 +145,7 @@ func TestLogging(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, expected, logConfig, ("wrong log config"))
+	assert.Equal(t, expected, logConfig, "wrong log config")
 }
 
 func TestNodesConfig(t *testing.T) {

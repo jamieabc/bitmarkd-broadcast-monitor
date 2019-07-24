@@ -10,17 +10,17 @@ import (
 	zmq "github.com/pebbe/zmq4"
 )
 
-type NodeClient interface {
+type Client interface {
 	BroadcastReceiver() *network.Client
-	Close()
+	Close() error
 	CommandSenderAndReceiver() *network.Client
 	DigestOfHeight(height uint64) (*blockdigest.Digest, error)
 	Info() (*communication.InfoResponse, error)
 }
 
-type NodeClientImpl struct {
+type client struct {
 	broadcastReceiver        *network.Client
-	commandSenderAndReciever *network.Client
+	commandSenderAndReceiver *network.Client
 }
 
 type connectionInfo struct {
@@ -29,7 +29,7 @@ type connectionInfo struct {
 	zmqType        zmq.Type
 }
 
-func newClient(config configuration.NodeConfig, nodeKey *nodeKeys) (NodeClient, error) {
+func newClient(config configuration.NodeConfig, nodeKey *nodeKeys) (Client, error) {
 	broadcastReceiver, err := newZmqClient(nodeKey, connectionInfo{
 		addressAndPort: broadcastAddressAndPort(config),
 		chain:          config.Chain,
@@ -48,9 +48,9 @@ func newClient(config configuration.NodeConfig, nodeKey *nodeKeys) (NodeClient, 
 		return nil, err
 	}
 
-	return &NodeClientImpl{
+	return &client{
 		broadcastReceiver:        broadcastReceiver,
-		commandSenderAndReciever: commandSenderAndReceiver,
+		commandSenderAndReceiver: commandSenderAndReceiver,
 	}, nil
 }
 
@@ -91,36 +91,47 @@ func hostAndPort(host string, port string) string {
 }
 
 // BroadcastReceiver - zmq client of broadcast receiver
-func (c *NodeClientImpl) BroadcastReceiver() *network.Client {
+func (c *client) BroadcastReceiver() *network.Client {
 	return c.broadcastReceiver
 }
 
-func (n *NodeClientImpl) Close() {
-	n.closeBroadcastReceiver()
-	n.closeCommandSenderAndReceiver()
+func (c *client) Close() error {
+	if err := c.closeBroadcastReceiver(); nil != err {
+		return err
+	}
+	if err := c.closeCommandSenderAndReceiver(); nil != err {
+		return err
+	}
+	return nil
 }
 
-func (n *NodeClientImpl) closeBroadcastReceiver() {
-	if nil != n.broadcastReceiver {
-		n.broadcastReceiver.Close()
+func (c *client) closeBroadcastReceiver() error {
+	if nil != c.broadcastReceiver {
+		if err := c.broadcastReceiver.Close(); nil != err {
+			return err
+		}
 	}
+	return nil
 }
 
-func (n *NodeClientImpl) closeCommandSenderAndReceiver() {
-	if nil != n.commandSenderAndReciever {
-		n.commandSenderAndReciever.Close()
+func (c *client) closeCommandSenderAndReceiver() error {
+	if nil != c.commandSenderAndReceiver {
+		if err := c.commandSenderAndReceiver.Close(); nil != err {
+			return err
+		}
 	}
+	return nil
 }
 
 // CommandSenderAndReceiver - zmq client of command sender and receiver
-func (c *NodeClientImpl) CommandSenderAndReceiver() *network.Client {
-	return c.commandSenderAndReciever
+func (c *client) CommandSenderAndReceiver() *network.Client {
+	return c.commandSenderAndReceiver
 }
 
 // DigestOfHeight - digest of block height
-func (n *NodeClientImpl) DigestOfHeight(height uint64) (*blockdigest.Digest, error) {
-	intf := communication.New(communication.ComDigest, n.commandSenderAndReciever)
-	reply, err := intf.Get(height)
+func (c *client) DigestOfHeight(height uint64) (*blockdigest.Digest, error) {
+	comm := communication.New(communication.ComDigest, c.commandSenderAndReceiver)
+	reply, err := comm.Get(height)
 	if nil != err {
 		return nil, err
 	}
@@ -128,9 +139,9 @@ func (n *NodeClientImpl) DigestOfHeight(height uint64) (*blockdigest.Digest, err
 }
 
 // Info - remote client info
-func (n *NodeClientImpl) Info() (*communication.InfoResponse, error) {
-	intf := communication.New(communication.ComInfo, n.commandSenderAndReciever)
-	reply, err := intf.Get()
+func (c *client) Info() (*communication.InfoResponse, error) {
+	comm := communication.New(communication.ComInfo, c.commandSenderAndReceiver)
+	reply, err := comm.Get()
 	if nil != err {
 		return nil, err
 	}

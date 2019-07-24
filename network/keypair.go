@@ -2,14 +2,9 @@ package network
 
 import (
 	"encoding/hex"
-	"io/ioutil"
-	"os"
 	"strings"
 
-	zmq "github.com/pebbe/zmq4"
-
 	"github.com/bitmark-inc/bitmarkd/fault"
-	"github.com/bitmark-inc/bitmarkd/util"
 )
 
 const (
@@ -18,38 +13,6 @@ const (
 	publicLength  = 32
 	privateLength = 32
 )
-
-// create a new public/private keypair and write them to separate
-// files
-func MakeKeyPair(publicKeyFileName string, privateKeyFileName string) error {
-	if util.EnsureFileExists(publicKeyFileName) {
-		return fault.ErrKeyFileAlreadyExists
-	}
-
-	if util.EnsureFileExists(privateKeyFileName) {
-		return fault.ErrKeyFileAlreadyExists
-	}
-
-	// keys are encoded in in Z85 (ZeroMQ Base-85 Encoding) see: http://rfc.zeromq.org/spec:32
-	publicKey, privateKey, err := zmq.NewCurveKeypair()
-	if nil != err {
-		return err
-	}
-
-	publicKey = taggedPublic + hex.EncodeToString([]byte(zmq.Z85decode(publicKey))) + "\n"
-	privateKey = taggedPrivate + hex.EncodeToString([]byte(zmq.Z85decode(privateKey))) + "\n"
-
-	if err = ioutil.WriteFile(publicKeyFileName, []byte(publicKey), 0666); err != nil {
-		return err
-	}
-
-	if err = ioutil.WriteFile(privateKeyFileName, []byte(privateKey), 0600); err != nil {
-		os.Remove(publicKeyFileName)
-		return err
-	}
-
-	return nil
-}
 
 // read a public key from a string returning it as a 32 byte string
 func ReadPublicKey(key string) ([]byte, error) {

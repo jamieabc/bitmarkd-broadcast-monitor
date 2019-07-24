@@ -9,7 +9,7 @@ import (
 )
 
 type Configuration interface {
-	Data() *ConfigurationImpl
+	Data() *configuration
 	HeartbeatIntervalInSecond() int
 	LogConfig() logger.Configuration
 	NodesConfig() []NodeConfig
@@ -17,7 +17,7 @@ type Configuration interface {
 	String() string
 }
 
-type ConfigurationImpl struct {
+type configuration struct {
 	Nodes                   []NodeConfig         `gluamapper:"nodes"`
 	Keys                    Keys                 `gluamapper:"keys"`
 	Logging                 logger.Configuration `gluamapper:"logging"`
@@ -61,7 +61,7 @@ func Parse(configFile string) (Configuration, error) {
 		return nil, err
 	}
 
-	config := &ConfigurationImpl{
+	config := &configuration{
 		Logging:                 defaultLogging,
 		HeartbeatIntervalSecond: defaultHeartbeatIntervalSecond,
 	}
@@ -74,22 +74,22 @@ func Parse(configFile string) (Configuration, error) {
 }
 
 // Data - return configuration
-func (c *ConfigurationImpl) Data() *ConfigurationImpl {
+func (c *configuration) Data() *configuration {
 	return c
 }
 
 // LogConfig - return log config
-func (c *ConfigurationImpl) LogConfig() logger.Configuration {
+func (c *configuration) LogConfig() logger.Configuration {
 	return c.Logging
 }
 
 // NodesConfig - return nodes config
-func (c *ConfigurationImpl) NodesConfig() []NodeConfig {
+func (c *configuration) NodesConfig() []NodeConfig {
 	return c.Nodes
 }
 
 // String - nodes info
-func (c *ConfigurationImpl) String() string {
+func (c *configuration) String() string {
 	var str strings.Builder
 	str.WriteString(fmt.Sprintf("Keys:\n\tpublic: \t%s\n\tprivate: \t%s\n", c.Keys.Public, c.Keys.Private))
 	str.WriteString("nodes:\n")
@@ -110,11 +110,11 @@ func (c *ConfigurationImpl) String() string {
 }
 
 // Key - return key
-func (c *ConfigurationImpl) Key() Keys {
+func (c *configuration) Key() Keys {
 	return c.Keys
 }
 
 // HeartbeatIntervalInSecond - heartbeat interval in second
-func (c *ConfigurationImpl) HeartbeatIntervalInSecond() int {
+func (c *configuration) HeartbeatIntervalInSecond() int {
 	return c.HeartbeatIntervalSecond
 }
