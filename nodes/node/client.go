@@ -1,12 +1,10 @@
 package node
 
 import (
-	"encoding/binary"
-	"encoding/json"
 	"fmt"
 
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
-	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/communication"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/configuration"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/network"
 	zmq "github.com/pebbe/zmq4"
@@ -17,7 +15,7 @@ type NodeClient interface {
 	Close()
 	CommandSenderAndReceiver() *network.Client
 	DigestOfHeight(height uint64) (*blockdigest.Digest, error)
-	Info() (*clientStatus, error)
+	Info() (*communication.InfoResponse, error)
 }
 
 type NodeClientImpl struct {
@@ -29,13 +27,6 @@ type connectionInfo struct {
 	addressAndPort string
 	chain          string
 	zmqType        zmq.Type
-}
-
-type clientStatus struct {
-	Version string `json:"version"`
-	Chain   string `json:"chain"`
-	Normal  bool   `json:"normal"`
-	Height  uint64 `json:"height"`
 }
 
 func newClient(config configuration.NodeConfig, nodeKey *nodeKeys) (NodeClient, error) {
@@ -128,50 +119,21 @@ func (c *NodeClientImpl) CommandSenderAndReceiver() *network.Client {
 
 // DigestOfHeight - digest of block height
 func (n *NodeClientImpl) DigestOfHeight(height uint64) (*blockdigest.Digest, error) {
-	client := n.commandSenderAndReciever
-	params := make([]byte, 8)
-	binary.BigEndian.PutUint64(params, height)
-	err := client.Send("H", params)
+	intf := communication.New(communication.ComDigest, n.commandSenderAndReciever)
+	reply, err := intf.Get(height)
 	if nil != err {
 		return nil, err
 	}
-
-	data, err := client.Receive(0)
-	if nil != err {
-		return nil, err
-	}
-	if string(data[0]) != "H" || 2 != len(data) {
-		return nil, fault.ErrInvalidPeerResponse
-	}
-
-	d := blockdigest.Digest{}
-	err = blockdigest.DigestFromBytes(&d, data[1])
-	return &d, err
+	return reply.(*blockdigest.Digest), nil
 }
 
 // Info - remote client info
-func (n *NodeClientImpl) Info() (*clientStatus, error) {
-	client := n.commandSenderAndReciever
-	err := client.Send("I")
+func (n *NodeClientImpl) Info() (*communication.InfoResponse, error) {
+	intf := communication.New(communication.ComInfo, n.commandSenderAndReciever)
+	reply, err := intf.Get()
 	if nil != err {
 		return nil, err
 	}
 
-	data, err := client.Receive(0)
-	if nil != err {
-		return nil, err
-	}
-
-	if "I" != string(data[0]) {
-		return nil, fmt.Errorf("wrong command")
-	}
-
-	var info clientStatus
-	err = json.Unmarshal(data[1], &info)
-	if nil != err {
-		return nil, err
-	}
-	fmt.Printf("info: %+v\n", info)
-
-	return &info, nil
+	return reply.(*communication.InfoResponse), nil
 }
