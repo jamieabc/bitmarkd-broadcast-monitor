@@ -8,6 +8,7 @@ import (
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/nodes/node"
 )
 
+// Nodes - nodes interface
 type Nodes interface {
 	DropRate()
 	Monitor()

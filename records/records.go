@@ -13,6 +13,7 @@ const (
 	recordSize = 40
 )
 
+// Records - records interface
 type Records interface {
 	AddHeartbeat(time.Time)
 	AddBlock(uint64, blockdigest.Digest)

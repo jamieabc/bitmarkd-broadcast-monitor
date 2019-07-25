@@ -308,12 +308,12 @@ func (client *Client) IsConnectedTo(serverPublicKey []byte) bool {
 
 // close and reopen the connection
 func (client *Client) Reconnect() error {
-	_, err := client.ReconnectReturningSocket()
+	_, err := client.reconnectReturningSocket()
 	return err
 }
 
 // close and reopen the connection
-func (client *Client) ReconnectReturningSocket() (*zmq.Socket, error) {
+func (client *Client) reconnectReturningSocket() (*zmq.Socket, error) {
 
 	err := client.closeSocket()
 	if nil != err {
@@ -459,12 +459,13 @@ func (client *Client) String() string {
 	return client.address
 }
 
+// Connected - connected info
 type Connected struct {
 	Address string `json:"address"`
 	Server  string `json:"server"`
 }
 
-// to string
+// ConnectedTo - return connected remote client info
 func (client *Client) ConnectedTo() *Connected {
 
 	if "" == client.address {

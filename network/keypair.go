@@ -38,6 +38,7 @@ func ReadPrivateKey(key string) ([]byte, error) {
 	return data, err
 }
 
+// ParseKey - parse key
 func ParseKey(data string) ([]byte, bool, error) {
 	s := strings.TrimSpace(string(data))
 	if strings.HasPrefix(s, taggedPrivate) {

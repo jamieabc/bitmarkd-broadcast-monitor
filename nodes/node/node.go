@@ -13,6 +13,7 @@ import (
 	zmq "github.com/pebbe/zmq4"
 )
 
+// Node - node interface
 type Node interface {
 	BroadcastReceiver() *network.Client
 	CloseConnection() error
@@ -120,6 +121,7 @@ func (n *node) BroadcastReceiver() *network.Client {
 	return n.client.BroadcastReceiver()
 }
 
+// CommandSenderAndReceiver - network client of command sender and receiver
 func (n *node) CommandSenderAndReceiver() *network.Client {
 	return n.client.CommandSenderAndReceiver()
 }

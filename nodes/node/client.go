@@ -10,6 +10,7 @@ import (
 	zmq "github.com/pebbe/zmq4"
 )
 
+// Client - client interface
 type Client interface {
 	BroadcastReceiver() *network.Client
 	Close() error
@@ -95,6 +96,7 @@ func (c *client) BroadcastReceiver() *network.Client {
 	return c.broadcastReceiver
 }
 
+// Close - close client
 func (c *client) Close() error {
 	if err := c.closeBroadcastReceiver(); nil != err {
 		return err

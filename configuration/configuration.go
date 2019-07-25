@@ -8,6 +8,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
+// Configuration - configuration interface
 type Configuration interface {
 	Data() *configuration
 	HeartbeatIntervalInSecond() int
@@ -24,6 +25,7 @@ type configuration struct {
 	HeartbeatIntervalSecond int                  `gluamapper:"heartbeat_interval_second"`
 }
 
+// NodeConfig - node config
 type NodeConfig struct {
 	AddressIPv4   string `gluamapper:"address_ipv4"`
 	BroadcastPort string `gluamapper:"broadcast_port"`
@@ -32,6 +34,7 @@ type NodeConfig struct {
 	PublicKey     string `gluamapper:"public_key"`
 }
 
+// Keys - public and private keys
 type Keys struct {
 	Public  string `gluamapper:"public"`
 	Private string `gluamapper:"private"`

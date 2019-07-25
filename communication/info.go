@@ -12,6 +12,7 @@ type info struct {
 	prefix string
 }
 
+// InfoResponse - info response
 type InfoResponse struct {
 	Version string `json:"version"`
 	Chain   string `json:"chain"`

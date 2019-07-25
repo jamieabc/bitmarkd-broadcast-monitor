@@ -13,6 +13,7 @@ const (
 	maxPort = 65535
 )
 
+// Connection - remote ip and port
 type Connection struct {
 	ip   net.IP
 	port uint16
