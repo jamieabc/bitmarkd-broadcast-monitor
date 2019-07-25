@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jamieabc/bitmarkd-broadcast-monitor/communication"
-
 	"github.com/bitmark-inc/logger"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/configuration"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/network"
@@ -18,22 +16,22 @@ import (
 type Node interface {
 	BroadcastReceiver() *network.Client
 	CommandSenderAndReceiver() *network.Client
-	SenderTimer() *time.Timer
+	CheckTimer() *time.Timer
+	Client() Client
 	CloseConnection() error
 	DropRate()
 	Log() *logger.L
 	Monitor(shutdown <-chan struct{})
-	RemoteInfo() (*communication.InfoResponse, error)
 	StopMonitor()
 	Verify()
 }
 
 type node struct {
-	config            configuration.NodeConfig
-	client            Client
-	id                int
-	log               *logger.L
-	clientSenderTimer *time.Timer
+	config     configuration.NodeConfig
+	client     Client
+	id         int
+	log        *logger.L
+	checkTimer *time.Timer
 }
 
 type nodeKeys struct {
@@ -44,7 +42,7 @@ type nodeKeys struct {
 
 const (
 	receiveBroadcastIntervalInSecond = 120 * time.Second
-	senderCheckIntervalInSecond      = 10 * time.Second
+	checkIntervalSecond              = 10 * time.Second
 	signal                           = "inproc://bitmarkd-broadcast-monitor-signal"
 )
 
@@ -70,10 +68,10 @@ func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int) 
 	log := logger.New(fmt.Sprintf("node-%d", idx))
 
 	n := &node{
-		config:            config,
-		id:                idx,
-		log:               log,
-		clientSenderTimer: time.NewTimer(time.Duration(senderCheckIntervalInSecond)),
+		config:     config,
+		id:         idx,
+		log:        log,
+		checkTimer: time.NewTimer(time.Duration(checkIntervalSecond)),
 	}
 
 	nodeKey, err := parseKeys(keys, config.PublicKey)
@@ -129,9 +127,14 @@ func (n *node) CommandSenderAndReceiver() *network.Client {
 	return n.client.CommandSenderAndReceiver()
 }
 
-// SenderTimer - get sender timer
-func (n *node) SenderTimer() *time.Timer {
-	return n.clientSenderTimer
+// CheckTimer - get sender timer
+func (n *node) CheckTimer() *time.Timer {
+	return n.checkTimer
+}
+
+// Client - return client interface
+func (n *node) Client() Client {
+	return n.client
 }
 
 // CloseConnection - close connection
@@ -147,15 +150,6 @@ func (n *node) DropRate() {
 	return
 }
 
-// RemoteInfo - remote info
-func (n *node) RemoteInfo() (*communication.InfoResponse, error) {
-	info, err := n.client.Info()
-	if nil != err {
-		return nil, err
-	}
-	return info, nil
-}
-
 // Log - get logger
 func (n *node) Log() *logger.L {
 	return n.log
@@ -164,8 +158,8 @@ func (n *node) Log() *logger.L {
 // Monitor - start to monitor
 func (n *node) Monitor(shutdown <-chan struct{}) {
 	go receiverLoop(n)
-	n.clientSenderTimer.Reset(senderCheckIntervalInSecond)
-	go senderLoop(n, shutdown)
+	n.checkTimer.Reset(checkIntervalSecond)
+	go checkerLoop(n, shutdown)
 
 loop:
 	select {

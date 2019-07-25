@@ -10,14 +10,6 @@ const (
 	maximumPacketSize = 5000000 // 5 MB
 )
 
-// ***** FIX THIS: enabling this causes complete failure
-// ***** FIX THIS: socket disconnects, perhaps after IVL value
-// const (
-// 	heartbeatInterval = 15 * time.Second
-// 	heartbeatTimeout  = 60 * time.Second
-// 	heartbeatTTL      = 60 * time.Second
-// )
-
 // return a pair of connected PAIR sockets
 // for shutdown signalling
 func NewSignalPair(signal string) (receiver *zmq.Socket, sender *zmq.Socket, err error) {
