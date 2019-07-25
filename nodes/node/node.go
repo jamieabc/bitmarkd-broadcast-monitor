@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/blockrecord"
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/communication"
+
 	"github.com/bitmark-inc/logger"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/configuration"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/network"
@@ -16,11 +17,13 @@ import (
 // Node - node interface
 type Node interface {
 	BroadcastReceiver() *network.Client
-	CloseConnection() error
 	CommandSenderAndReceiver() *network.Client
+	SenderTimer() *time.Timer
+	CloseConnection() error
 	DropRate()
 	Log() *logger.L
-	Monitor(<-chan struct{})
+	Monitor(shutdown <-chan struct{})
+	RemoteInfo() (*communication.InfoResponse, error)
 	StopMonitor()
 	Verify()
 }
@@ -89,7 +92,7 @@ func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int) 
 	return n, nil
 }
 
-func parseKeys(keys configuration.Keys, remotePublickeyStr string) (*nodeKeys, error) {
+func parseKeys(keys configuration.Keys, remotePublicKeyStr string) (*nodeKeys, error) {
 	publicKey, err := network.ReadPublicKey(keys.Public)
 	if nil != err {
 		return nil, err
@@ -100,7 +103,7 @@ func parseKeys(keys configuration.Keys, remotePublickeyStr string) (*nodeKeys, e
 		return nil, err
 	}
 
-	remotePublicKey, err := hex.DecodeString(remotePublickeyStr)
+	remotePublicKey, err := hex.DecodeString(remotePublicKeyStr)
 	if nil != err {
 		return nil, err
 	}
@@ -126,6 +129,11 @@ func (n *node) CommandSenderAndReceiver() *network.Client {
 	return n.client.CommandSenderAndReceiver()
 }
 
+// SenderTimer - get sender timer
+func (n *node) SenderTimer() *time.Timer {
+	return n.clientSenderTimer
+}
+
 // CloseConnection - close connection
 func (n *node) CloseConnection() error {
 	if err := n.client.Close(); nil != err {
@@ -139,6 +147,15 @@ func (n *node) DropRate() {
 	return
 }
 
+// RemoteInfo - remote info
+func (n *node) RemoteInfo() (*communication.InfoResponse, error) {
+	info, err := n.client.Info()
+	if nil != err {
+		return nil, err
+	}
+	return info, nil
+}
+
 // Log - get logger
 func (n *node) Log() *logger.L {
 	return n.log
@@ -146,9 +163,9 @@ func (n *node) Log() *logger.L {
 
 // Monitor - start to monitor
 func (n *node) Monitor(shutdown <-chan struct{}) {
-	go n.receiverLoop()
+	go receiverLoop(n)
 	n.clientSenderTimer.Reset(senderCheckIntervalInSecond)
-	go n.senderLoop(shutdown)
+	go senderLoop(n, shutdown)
 
 loop:
 	select {
@@ -162,81 +179,6 @@ loop:
 	return
 }
 
-func (n *node) receiverLoop() {
-	poller := network.NewPoller()
-	broadcastReceiver := n.BroadcastReceiver()
-	_ = broadcastReceiver.BeginPolling(poller, zmq.POLLIN)
-	poller.Add(internalSignalReceiver, zmq.POLLIN)
-
-	log := n.Log()
-
-loop:
-	for {
-		log.Debug("waiting to receive broadcast...")
-		polled, _ := poller.Poll(receiveBroadcastIntervalInSecond)
-		if 0 == len(polled) {
-			log.Info("over heartbeat receive time")
-			continue
-		}
-		for _, p := range polled {
-			switch s := p.Socket; s {
-			case internalSignalReceiver:
-				_, err := s.RecvMessageBytes(0)
-				if nil != err {
-					log.Errorf("receive error: %s", err)
-				}
-				log.Debug("receive stop message")
-				break loop
-			default:
-				data, err := s.RecvMessageBytes(0)
-				if nil != err {
-					log.Errorf("receive error: %s", err)
-					continue
-				}
-				n.process(data)
-			}
-		}
-	}
-
-	if err := stopInternalSignalReceiver(); nil != err {
-		log.Errorf("stop internal signal with error: %s", err)
-	}
-	if err := n.CloseConnection(); nil != err {
-		log.Errorf("close connection with error: %s", err)
-	}
-	log.Flush()
-
-	return
-}
-
-func (n *node) process(data [][]byte) {
-	chain := data[0]
-	log := n.Log()
-
-	switch d := data[1]; string(d) {
-	case "block":
-		log.Debugf("block: %x", data[2])
-		header, digest, _, err := blockrecord.ExtractHeader(data[2])
-		if nil != err {
-			log.Errorf("extract header with error: %s", err)
-			return
-		}
-
-		log.Infof("receive chain %s, block %d, previous block %s, digest: %s",
-			chain,
-			header.Number,
-			header.PreviousBlock.String(),
-			digest.String(),
-		)
-
-	case "heart":
-		log.Infof("receive heartbeat")
-
-	default:
-		log.Infof("receive %s", d)
-	}
-}
-
 func stopInternalSignalReceiver() error {
 	if err := internalSignalReceiver.Close(); nil != err {
 		return err
@@ -244,30 +186,8 @@ func stopInternalSignalReceiver() error {
 	return nil
 }
 
-func (n *node) senderLoop(shutdown <-chan struct{}) {
-	log := n.Log()
-loop:
-	for {
-		select {
-		case <-shutdown:
-			log.Infof("receive shutdown signal")
-			break loop
-		case <-n.clientSenderTimer.C:
-			log.Debug("get client info")
-			info, err := n.client.Info()
-			if nil != err {
-				log.Errorf("get client info error: %s", err)
-				log.Infof("client info: %v\n", info)
-			}
-			n.clientSenderTimer.Reset(senderCheckIntervalInSecond)
-		}
-	}
-	log.Infof("finish")
-}
-
 func stopInternalGoRoutines() {
-	_, err := internalSignalSender.SendMessage("stop")
-	if nil != err {
+	if _, err := internalSignalSender.SendMessage("stop"); nil != err {
 		logger.Criticalf("send stop message with error: %s", err)
 	}
 	if err := internalSignalSender.Close(); nil != err {

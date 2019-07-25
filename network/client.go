@@ -50,7 +50,7 @@ var globalClientData = globalClientDataType{
 	clients: make(map[*zmq.Socket]*Client),
 }
 
-// create a client socket ususlly of type zmq.REQ or zmq.SUB
+// create a client socket usually of type zmq.REQ or zmq.SUB
 func NewClient(socketType zmq.Type, privateKey []byte, publicKey []byte, timeout time.Duration) (*Client, error) {
 
 	if len(publicKey) != publicKeySize {
@@ -78,7 +78,7 @@ func NewClient(socketType zmq.Type, privateKey []byte, publicKey []byte, timeout
 	return client, nil
 }
 
-// create a socket and connect to specific server with specifed key
+// create a socket and connect to specific server with specified key
 func (client *Client) openSocket() error {
 	client.Lock()
 	defer client.Unlock()
@@ -110,7 +110,7 @@ func (client *Client) openSocket() error {
 		goto failure
 	}
 
-	// local identitity is a random value
+	// local identity is a random value
 	err = socket.SetIdentity(randomIdentifier)
 	if nil != err {
 		goto failure
@@ -141,7 +141,7 @@ func (client *Client) openSocket() error {
 		goto failure
 	}
 
-	// stype specific options
+	// socket type specific options
 	switch client.socketType {
 	case zmq.REQ:
 		err = socket.SetReqCorrelate(1)
@@ -273,7 +273,7 @@ func (client *Client) Connect(conn *Connection, serverPublicKey []byte, prefix s
 	client.address = ""
 	client.prefix = prefix
 
-	// small delay to allow any backgroud socket closing
+	// small delay to allow any background socket closing
 	// and to restrict rate of reconnection
 	time.Sleep(5 * time.Millisecond)
 
@@ -350,7 +350,7 @@ func (client *Client) Send(items ...interface{}) error {
 	}
 
 	if 0 == len(items) {
-		logger.Panicf("zmqutil.Client.Send no arguments provided")
+		logger.Panicf("Client.Send no arguments provided")
 	}
 
 	if "" != client.prefix {
@@ -384,7 +384,7 @@ func (client *Client) Send(items ...interface{}) error {
 				}
 			}
 		default:
-			logger.Panicf("zmqutil.Client.Send cannot send[%d]: %#v", i, item)
+			logger.Panicf("Client.Send cannot send[%d]: %#v", i, item)
 		}
 	}
 
@@ -401,7 +401,7 @@ func (client *Client) Send(items ...interface{}) error {
 		}
 	case [][]byte:
 		if 0 == len(it) {
-			logger.Panicf("zmqutil.Client.Send empty [][]byte")
+			logger.Panicf("Client.Send empty [][]byte")
 		}
 		n := len(it) - 1
 		a := it[:n]
@@ -419,7 +419,7 @@ func (client *Client) Send(items ...interface{}) error {
 		}
 
 	default:
-		logger.Panicf("zmqutil.Client.Send cannot send[%d]: %#v", n, final)
+		logger.Panicf("Client.Send cannot send[%d]: %#v", n, final)
 	}
 
 	return nil

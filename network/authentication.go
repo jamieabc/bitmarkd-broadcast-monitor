@@ -9,7 +9,7 @@ import (
 // to ensure only one auth start
 var oneTimeAuthStart sync.Once
 
-// initilaise the ZMQ security subsystem
+// StartAuthentication - initialise the ZMQ security subsystem
 func StartAuthentication() error {
 
 	err := error(nil)

@@ -20,17 +20,17 @@ const (
 
 // return a pair of connected PAIR sockets
 // for shutdown signalling
-func NewSignalPair(signal string) (reciever *zmq.Socket, sender *zmq.Socket, err error) {
+func NewSignalPair(signal string) (receiver *zmq.Socket, sender *zmq.Socket, err error) {
 
 	// PAIR server, half of signalling channel
-	reciever, err = zmq.NewSocket(zmq.PAIR)
+	receiver, err = zmq.NewSocket(zmq.PAIR)
 	if nil != err {
 		return nil, nil, err
 	}
-	_ = reciever.SetLinger(0)
-	err = reciever.Bind(signal)
+	_ = receiver.SetLinger(0)
+	err = receiver.Bind(signal)
 	if nil != err {
-		_ = reciever.Close()
+		_ = receiver.Close()
 		return nil, nil, err
 	}
 
@@ -47,5 +47,5 @@ func NewSignalPair(signal string) (reciever *zmq.Socket, sender *zmq.Socket, err
 		return nil, nil, err
 	}
 
-	return reciever, sender, nil
+	return receiver, sender, nil
 }
