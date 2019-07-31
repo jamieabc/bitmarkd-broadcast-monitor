@@ -11,11 +11,11 @@ loop:
 			log.Infof("receive shutdown signal")
 			break loop
 		case <-n.CheckTimer().C:
-			log.Debug("time to check client block")
+			log.Debug("time to check remote block")
 			info, err := remoteInfo(n)
 			if nil != err {
-				log.Errorf("get client info error: %s", err)
-				log.Infof("client info: %v\n", info)
+				log.Errorf("get remote info error: %s", err)
+				log.Infof("remote info: %v\n", info)
 			}
 			n.CheckTimer().Reset(checkIntervalSecond)
 		}

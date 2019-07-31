@@ -10,8 +10,8 @@ import (
 	zmq "github.com/pebbe/zmq4"
 )
 
-// Client - client interface
-type Client interface {
+// Remote - remote interface
+type Remote interface {
 	BroadcastReceiver() *network.Client
 	Close() error
 	CommandSenderAndReceiver() *network.Client
@@ -19,7 +19,7 @@ type Client interface {
 	Info() (*communication.InfoResponse, error)
 }
 
-type client struct {
+type remote struct {
 	broadcastReceiver        *network.Client
 	commandSenderAndReceiver *network.Client
 }
@@ -30,7 +30,7 @@ type connectionInfo struct {
 	zmqType        zmq.Type
 }
 
-func newClient(config configuration.NodeConfig, nodeKey *nodeKeys) (Client, error) {
+func newClient(config configuration.NodeConfig, nodeKey *nodeKeys) (Remote, error) {
 	broadcastReceiver, err := newZmqClient(nodeKey, connectionInfo{
 		addressAndPort: broadcastAddressAndPort(config),
 		chain:          config.Chain,
@@ -49,7 +49,7 @@ func newClient(config configuration.NodeConfig, nodeKey *nodeKeys) (Client, erro
 		return nil, err
 	}
 
-	return &client{
+	return &remote{
 		broadcastReceiver:        broadcastReceiver,
 		commandSenderAndReceiver: commandSenderAndReceiver,
 	}, nil
@@ -91,13 +91,13 @@ func hostAndPort(host string, port string) string {
 	return fmt.Sprintf("%s:%s", host, port)
 }
 
-// BroadcastReceiver - zmq client of broadcast receiver
-func (c *client) BroadcastReceiver() *network.Client {
+// BroadcastReceiver - zmq remote of broadcast receiver
+func (c *remote) BroadcastReceiver() *network.Client {
 	return c.broadcastReceiver
 }
 
-// Close - close client
-func (c *client) Close() error {
+// Close - close remote
+func (c *remote) Close() error {
 	if err := c.closeBroadcastReceiver(); nil != err {
 		return err
 	}
@@ -107,7 +107,7 @@ func (c *client) Close() error {
 	return nil
 }
 
-func (c *client) closeBroadcastReceiver() error {
+func (c *remote) closeBroadcastReceiver() error {
 	if nil != c.broadcastReceiver {
 		if err := c.broadcastReceiver.Close(); nil != err {
 			return err
@@ -116,7 +116,7 @@ func (c *client) closeBroadcastReceiver() error {
 	return nil
 }
 
-func (c *client) closeCommandSenderAndReceiver() error {
+func (c *remote) closeCommandSenderAndReceiver() error {
 	if nil != c.commandSenderAndReceiver {
 		if err := c.commandSenderAndReceiver.Close(); nil != err {
 			return err
@@ -125,13 +125,13 @@ func (c *client) closeCommandSenderAndReceiver() error {
 	return nil
 }
 
-// CommandSenderAndReceiver - zmq client of command sender and receiver
-func (c *client) CommandSenderAndReceiver() *network.Client {
+// CommandSenderAndReceiver - zmq remote of command sender and receiver
+func (c *remote) CommandSenderAndReceiver() *network.Client {
 	return c.commandSenderAndReceiver
 }
 
 // DigestOfHeight - digest of block height
-func (c *client) DigestOfHeight(height uint64) (*blockdigest.Digest, error) {
+func (c *remote) DigestOfHeight(height uint64) (*blockdigest.Digest, error) {
 	comm := communication.New(communication.ComDigest, c.commandSenderAndReceiver)
 	reply, err := comm.Get(height)
 	if nil != err {
@@ -140,8 +140,8 @@ func (c *client) DigestOfHeight(height uint64) (*blockdigest.Digest, error) {
 	return reply.(*blockdigest.Digest), nil
 }
 
-// Info - remote client info
-func (c *client) Info() (*communication.InfoResponse, error) {
+// Info - remote remote info
+func (c *remote) Info() (*communication.InfoResponse, error) {
 	comm := communication.New(communication.ComInfo, c.commandSenderAndReceiver)
 	reply, err := comm.Get()
 	if nil != err {
