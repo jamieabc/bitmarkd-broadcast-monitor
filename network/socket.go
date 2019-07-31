@@ -26,7 +26,7 @@ func NewSignalPair(signal string) (receiver *zmq.Socket, sender *zmq.Socket, err
 		return nil, nil, err
 	}
 
-	// PAIR Client, half of signalling channel
+	// PAIR client, half of signalling channel
 	sender, err = zmq.NewSocket(zmq.PAIR)
 	if nil != err && nil != sender {
 		_ = sender.Close()

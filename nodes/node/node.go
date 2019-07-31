@@ -14,8 +14,8 @@ import (
 
 // Node - node interface
 type Node interface {
-	BroadcastReceiver() *network.Client
-	CommandSenderAndReceiver() *network.Client
+	BroadcastReceiver() network.Client
+	CommandSenderAndReceiver() network.Client
 	CheckTimer() *time.Timer
 	Client() Remote
 	CloseConnection() error
@@ -118,12 +118,12 @@ func parseKeys(keys configuration.Keys, remotePublicKeyStr string) (*nodeKeys, e
 }
 
 // BroadcastReceiverClient - get zmq broadcast receiver remote
-func (n *node) BroadcastReceiver() *network.Client {
+func (n *node) BroadcastReceiver() network.Client {
 	return n.client.BroadcastReceiver()
 }
 
 // CommandSenderAndReceiver - network remote of command sender and receiver
-func (n *node) CommandSenderAndReceiver() *network.Client {
+func (n *node) CommandSenderAndReceiver() network.Client {
 	return n.client.CommandSenderAndReceiver()
 }
 

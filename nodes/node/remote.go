@@ -12,16 +12,16 @@ import (
 
 // Remote - remote interface
 type Remote interface {
-	BroadcastReceiver() *network.Client
+	BroadcastReceiver() network.Client
 	Close() error
-	CommandSenderAndReceiver() *network.Client
+	CommandSenderAndReceiver() network.Client
 	DigestOfHeight(height uint64) (*blockdigest.Digest, error)
 	Info() (*communication.InfoResponse, error)
 }
 
 type remote struct {
-	broadcastReceiver        *network.Client
-	commandSenderAndReceiver *network.Client
+	broadcastReceiver        network.Client
+	commandSenderAndReceiver network.Client
 }
 
 type connectionInfo struct {
@@ -55,7 +55,7 @@ func newClient(config configuration.NodeConfig, nodeKey *nodeKeys) (Remote, erro
 	}, nil
 }
 
-func newZmqClient(nodeKey *nodeKeys, info connectionInfo) (client *network.Client, err error) {
+func newZmqClient(nodeKey *nodeKeys, info connectionInfo) (client network.Client, err error) {
 	address, err := network.NewConnection(info.addressAndPort)
 	if nil != err {
 		return nil, err
@@ -67,7 +67,7 @@ func newZmqClient(nodeKey *nodeKeys, info connectionInfo) (client *network.Clien
 	}
 	defer func() {
 		if nil != err && nil != client {
-			network.CloseClients([]*network.Client{client})
+			network.CloseClients([]network.Client{client})
 		}
 	}()
 
@@ -92,7 +92,7 @@ func hostAndPort(host string, port string) string {
 }
 
 // BroadcastReceiver - zmq remote of broadcast receiver
-func (c *remote) BroadcastReceiver() *network.Client {
+func (c *remote) BroadcastReceiver() network.Client {
 	return c.broadcastReceiver
 }
 
@@ -126,7 +126,7 @@ func (c *remote) closeCommandSenderAndReceiver() error {
 }
 
 // CommandSenderAndReceiver - zmq remote of command sender and receiver
-func (c *remote) CommandSenderAndReceiver() *network.Client {
+func (c *remote) CommandSenderAndReceiver() network.Client {
 	return c.commandSenderAndReceiver
 }
 

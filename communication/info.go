@@ -8,7 +8,7 @@ import (
 )
 
 type info struct {
-	client *network.Client
+	client network.Client
 	prefix string
 }
 
@@ -20,7 +20,7 @@ type InfoResponse struct {
 	Height  uint64 `json:"height"`
 }
 
-func newInfo(client *network.Client) Communication {
+func newInfo(client network.Client) Communication {
 	return &info{
 		client: client,
 		prefix: "I",

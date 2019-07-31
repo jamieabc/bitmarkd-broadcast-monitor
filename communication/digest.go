@@ -4,17 +4,18 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/network"
+
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/fault"
-	"github.com/jamieabc/bitmarkd-broadcast-monitor/network"
 )
 
 type digest struct {
-	client *network.Client
+	client network.Client
 	prefix string
 }
 
-func newDigest(client *network.Client) Communication {
+func newDigest(client network.Client) Communication {
 	return &digest{
 		client: client,
 		prefix: "I",

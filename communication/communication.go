@@ -19,7 +19,7 @@ const (
 )
 
 // New - new communication
-func New(comType ComType, client *network.Client) Communication {
+func New(comType ComType, client network.Client) Communication {
 	switch comType {
 	case ComInfo:
 		return newInfo(client)
