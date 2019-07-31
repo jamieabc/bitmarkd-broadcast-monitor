@@ -13,6 +13,12 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
+// point at which to disconnect large message senders
+// current estimate of a block maximum is 2 MB
+const (
+	maximumPacketSize = 5000000 // 5 MB
+)
+
 // structure to hold a client connection
 //
 // prefix:

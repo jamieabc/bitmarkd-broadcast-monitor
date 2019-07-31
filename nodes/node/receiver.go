@@ -31,25 +31,6 @@ func receiverLoop(n Node, shutdownCh <-chan struct{}, id int) {
 				}
 				process(n, data)
 			}
-
-			//for _, p := range polled {
-			//	switch s := p.Socket; s {
-			//	case internalSignalReceiver:
-			//		_, err := s.RecvMessageBytes(0)
-			//		if nil != err {
-			//			log.Errorf("receive error: %s", err)
-			//		}
-			//		log.Debug("receive stop message")
-			//		break loop
-			//	default:
-			//		data, err := s.RecvMessageBytes(0)
-			//		if nil != err {
-			//			log.Errorf("receive error: %s", err)
-			//			continue
-			//		}
-			//		process(n, data)
-			//	}
-			//}
 		}
 	}()
 

@@ -1,21 +1,27 @@
 package network
 
 import (
+	"github.com/pebbe/zmq4"
 	zmq "github.com/pebbe/zmq4"
 )
 
-// point at which to disconnect large message senders
-// current estimate of a block maximum is 2 MB
-const (
-	maximumPacketSize = 5000000 // 5 MB
-)
+// SignalPair - zmq signal pair for receiving signal
+type SignalPair interface {
+	StopSender()
+	StopReceiver()
+	Send()
+	Messages()
+}
 
-// return a pair of connected PAIR sockets
-// for shutdown signalling
-func NewSignalPair(signal string) (receiver *zmq.Socket, sender *zmq.Socket, err error) {
+type signalPair struct {
+	sender   *zmq4.Socket
+	receiver *zmq.Socket
+}
 
+// NewSignalPair - new signal pair
+func NewSignalPair(signal string) (receiver *zmq4.Socket, sender *zmq4.Socket, err error) {
 	// PAIR server, half of signalling channel
-	receiver, err = zmq.NewSocket(zmq.PAIR)
+	receiver, err = zmq4.NewSocket(zmq4.PAIR)
 	if nil != err {
 		return nil, nil, err
 	}
@@ -27,7 +33,7 @@ func NewSignalPair(signal string) (receiver *zmq.Socket, sender *zmq.Socket, err
 	}
 
 	// PAIR client, half of signalling channel
-	sender, err = zmq.NewSocket(zmq.PAIR)
+	sender, err = zmq4.NewSocket(zmq4.PAIR)
 	if nil != err && nil != sender {
 		_ = sender.Close()
 		return nil, nil, err
