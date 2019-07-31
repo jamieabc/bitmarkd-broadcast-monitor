@@ -29,7 +29,7 @@ type client struct {
 	v6              bool
 	socketType      zmq.Type
 	socket          *zmq.Socket
-	poller          *Poller
+	poller          Poller
 	events          zmq.State
 	timeout         time.Duration
 	timestamp       time.Time
@@ -223,7 +223,7 @@ func (client *client) openSocket() error {
 
 	// add to poller
 	if nil != client.poller {
-		client.poller.Add(client.socket, client.events)
+		client.poller.Add(client, client.events)
 	}
 	return nil
 failure:
@@ -438,8 +438,7 @@ func (client *client) Receive(flags zmq.Flag) ([][]byte, error) {
 }
 
 // add poller to client
-func (client *client) BeginPolling(poller *Poller, events zmq.State) *zmq.Socket {
-
+func (client *client) BeginPolling(poller Poller, events zmq.State) *zmq.Socket {
 	// if poller changed
 	if nil != client.poller && nil != client.socket {
 		client.poller.Remove(client.socket)
@@ -449,7 +448,7 @@ func (client *client) BeginPolling(poller *Poller, events zmq.State) *zmq.Socket
 	client.poller = poller
 	client.events = events
 	if nil != client.socket {
-		poller.Add(client.socket, events)
+		poller.Add(client, events)
 	}
 	return client.socket
 }
@@ -477,16 +476,22 @@ func (client *client) ConnectedTo() *Connected {
 	}
 }
 
+// Socket - return socket
+func (client *client) Socket() *zmq.Socket {
+	return client.socket
+}
+
 // Client - network client interface
 type Client interface {
+	BeginPolling(poller Poller, events zmq.State) *zmq.Socket
+	Close() error
 	Connect(conn *Connection, serverPublicKey []byte, prefix string) error
+	ConnectedTo() *Connected
 	IsConnected() bool
 	IsConnectedTo(serverPublicKey []byte) bool
-	Reconnect() error
-	Close() error
-	Send(items ...interface{}) error
 	Receive(flags zmq.Flag) ([][]byte, error)
-	BeginPolling(poller *Poller, events zmq.State) *zmq.Socket
+	Reconnect() error
+	Send(items ...interface{}) error
+	Socket() *zmq.Socket
 	String() string
-	ConnectedTo() *Connected
 }

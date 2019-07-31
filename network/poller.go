@@ -8,7 +8,7 @@ import (
 )
 
 // structure to hold a poller
-type Poller struct {
+type poller struct {
 	sync.Mutex
 	sockets map[*zmq.Socket]zmq.State
 	poller  *zmq.Poller
@@ -16,52 +16,60 @@ type Poller struct {
 
 // create a poller
 // this is just to encapsulate the zmq poller to allow removal of a socket from a socket
-func NewPoller() *Poller {
-	return &Poller{
+func NewPoller() Poller {
+	return &poller{
 		sockets: make(map[*zmq.Socket]zmq.State),
 		poller:  zmq.NewPoller(),
 	}
 }
 
-// add a socket to a poller
-func (poller *Poller) Add(socket *zmq.Socket, events zmq.State) {
+// Add - add socket to poller
+func (p *poller) Add(client Client, events zmq.State) {
+	p.Lock()
+	defer p.Unlock()
 
-	poller.Lock()
-	defer poller.Unlock()
+	socket := client.Socket()
 
 	// protect against duplicate add
-	if _, ok := poller.sockets[socket]; ok {
+	if _, exist := p.sockets[socket]; exist {
 		return
 	}
 
 	// preserve the event mask
-	poller.sockets[socket] = events
+	p.sockets[socket] = events
 
-	// add to the internal poller
-	poller.poller.Add(socket, events)
+	// add to the internal p
+	p.poller.Add(socket, events)
 }
 
 // remove a socket from a poller
-func (poller *Poller) Remove(socket *zmq.Socket) {
+func (p *poller) Remove(socket *zmq.Socket) {
 
-	poller.Lock()
-	defer poller.Unlock()
+	p.Lock()
+	defer p.Unlock()
 
 	// protect against duplicate remove
-	if _, ok := poller.sockets[socket]; !ok {
+	if _, ok := p.sockets[socket]; !ok {
 		return
 	}
 
 	// remove the socket
-	delete(poller.sockets, socket)
-	_ = poller.poller.RemoveBySocket(socket)
+	delete(p.sockets, socket)
+	_ = p.poller.RemoveBySocket(socket)
 }
 
 // perform a poll
-func (poller *Poller) Poll(timeout time.Duration) ([]zmq.Polled, error) {
-	poller.Lock()
-	p := poller.poller
-	poller.Unlock()
-	polled, err := p.Poll(timeout)
+func (p *poller) Poll(timeout time.Duration) ([]zmq.Polled, error) {
+	p.Lock()
+	poll := p.poller
+	p.Unlock()
+	polled, err := poll.Poll(timeout)
 	return polled, err
+}
+
+// Poller - poller interface
+type Poller interface {
+	Add(client Client, events zmq.State)
+	Poll(timeout time.Duration) ([]zmq.Polled, error)
+	Remove(socket *zmq.Socket)
 }

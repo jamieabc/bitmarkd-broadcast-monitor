@@ -9,8 +9,7 @@ import (
 func receiverLoop(n Node) {
 	poller := network.NewPoller()
 	broadcastReceiver := n.BroadcastReceiver()
-	_ = broadcastReceiver.BeginPolling(poller, zmq.POLLIN)
-	poller.Add(internalSignalReceiver, zmq.POLLIN)
+	poller.Add(broadcastReceiver, zmq.POLLIN)
 
 	log := n.Log()
 
