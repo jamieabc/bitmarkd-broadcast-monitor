@@ -71,7 +71,7 @@ func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int) 
 		config:     config,
 		id:         idx,
 		log:        log,
-		checkTimer: time.NewTimer(time.Duration(checkIntervalSecond)),
+		checkTimer: time.NewTimer(checkIntervalSecond),
 	}
 
 	nodeKey, err := parseKeys(keys, config.PublicKey)
@@ -156,14 +156,14 @@ func (n *node) Log() *logger.L {
 }
 
 // Monitor - start to monitor
-func (n *node) Monitor(shutdown <-chan struct{}) {
-	go receiverLoop(n)
+func (n *node) Monitor(shutdownCh <-chan struct{}) {
+	go receiverLoop(n, shutdownCh, n.id)
 	n.checkTimer.Reset(checkIntervalSecond)
-	go checkerLoop(n, shutdown)
+	go checkerLoop(n, shutdownCh)
 
 loop:
 	select {
-	case <-shutdown:
+	case <-shutdownCh:
 		break loop
 	}
 

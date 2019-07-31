@@ -123,7 +123,7 @@ func (client *client) openSocket() error {
 	}
 
 	// only queue messages sent to connected peers
-	socket.SetImmediate(true)
+	_ = socket.SetImmediate(true)
 
 	// zero => do not set timeout
 	if 0 != client.timeout {
@@ -248,7 +248,7 @@ func (client *client) closeSocket() error {
 
 	// if already connected, disconnect first
 	if "" != client.address {
-		client.socket.Disconnect(client.address)
+		_ = client.socket.Disconnect(client.address)
 	}
 
 	// unregister client globally
@@ -335,7 +335,7 @@ func (client *client) Close() error {
 func CloseClients(clients []Client) {
 	for _, client := range clients {
 		if nil != client {
-			client.Close()
+			_ = client.Close()
 		}
 	}
 }
@@ -437,40 +437,23 @@ func (client *client) Receive(flags zmq.Flag) ([][]byte, error) {
 	return data, err
 }
 
-// add poller to client
-func (client *client) BeginPolling(poller Poller, events zmq.State) *zmq.Socket {
-	// if poller changed
-	if nil != client.poller && nil != client.socket {
-		client.poller.Remove(client.socket)
-	}
-
-	// add to new poller
-	client.poller = poller
-	client.events = events
-	if nil != client.socket {
-		poller.Add(client, events)
-	}
-	return client.socket
-}
-
 // to string
 func (client *client) String() string {
 	return client.address
 }
 
-// Connected - connected info
-type Connected struct {
+type connected struct {
 	Address string `json:"address"`
 	Server  string `json:"server"`
 }
 
 // ConnectedTo - return connected remote client info
-func (client *client) ConnectedTo() *Connected {
+func (client *client) ConnectedTo() *connected {
 
 	if "" == client.address {
 		return nil
 	}
-	return &Connected{
+	return &connected{
 		Address: client.address,
 		Server:  hex.EncodeToString(client.serverPublicKey),
 	}
@@ -483,10 +466,9 @@ func (client *client) Socket() *zmq.Socket {
 
 // Client - network client interface
 type Client interface {
-	BeginPolling(poller Poller, events zmq.State) *zmq.Socket
 	Close() error
 	Connect(conn *Connection, serverPublicKey []byte, prefix string) error
-	ConnectedTo() *Connected
+	ConnectedTo() *connected
 	IsConnected() bool
 	IsConnectedTo(serverPublicKey []byte) bool
 	Receive(flags zmq.Flag) ([][]byte, error)

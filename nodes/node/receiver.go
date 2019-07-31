@@ -6,40 +6,54 @@ import (
 	zmq "github.com/pebbe/zmq4"
 )
 
-func receiverLoop(n Node) {
-	poller := network.NewPoller()
-	broadcastReceiver := n.BroadcastReceiver()
-	poller.Add(broadcastReceiver, zmq.POLLIN)
-
+func receiverLoop(n Node, shutdownCh <-chan struct{}, id int) {
+	eventChannel := make(chan zmq.Polled, 10)
 	log := n.Log()
 
-loop:
-	for {
-		log.Debug("waiting to receive broadcast...")
-		polled, _ := poller.Poll(receiveBroadcastIntervalInSecond)
-		if 0 == len(polled) {
-			log.Info("over heartbeat receive time")
-			continue
-		}
-		for _, p := range polled {
-			switch s := p.Socket; s {
-			case internalSignalReceiver:
-				_, err := s.RecvMessageBytes(0)
-				if nil != err {
-					log.Errorf("receive error: %s", err)
-				}
-				log.Debug("receive stop message")
-				break loop
-			default:
-				data, err := s.RecvMessageBytes(0)
+	poller, err := network.NewPoller(eventChannel, shutdownCh, id)
+	if nil != err {
+		log.Errorf("create poller with error: %s", err)
+		return
+	}
+	poller.Add(n.BroadcastReceiver(), zmq.POLLIN)
+
+	go func() {
+		for {
+			_ = poller.Start(receiveBroadcastIntervalInSecond)
+			log.Debug("waiting broadcast...")
+
+			select {
+			case polled := <-eventChannel:
+				data, err := polled.Socket.RecvMessageBytes(0)
 				if nil != err {
 					log.Errorf("receive error: %s", err)
 					continue
 				}
 				process(n, data)
 			}
+
+			//for _, p := range polled {
+			//	switch s := p.Socket; s {
+			//	case internalSignalReceiver:
+			//		_, err := s.RecvMessageBytes(0)
+			//		if nil != err {
+			//			log.Errorf("receive error: %s", err)
+			//		}
+			//		log.Debug("receive stop message")
+			//		break loop
+			//	default:
+			//		data, err := s.RecvMessageBytes(0)
+			//		if nil != err {
+			//			log.Errorf("receive error: %s", err)
+			//			continue
+			//		}
+			//		process(n, data)
+			//	}
+			//}
 		}
-	}
+	}()
+
+	<-shutdownCh
 
 	if err := stopInternalSignalReceiver(); nil != err {
 		log.Errorf("stop internal signal with error: %s", err)
