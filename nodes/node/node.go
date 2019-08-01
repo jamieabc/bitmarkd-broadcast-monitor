@@ -9,7 +9,6 @@ import (
 	"github.com/bitmark-inc/logger"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/configuration"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/network"
-	zmq "github.com/pebbe/zmq4"
 )
 
 // Node - node interface
@@ -43,25 +42,7 @@ type nodeKeys struct {
 const (
 	receiveBroadcastIntervalInSecond = 120 * time.Second
 	checkIntervalSecond              = 10 * time.Second
-	signal                           = "inproc://bitmarkd-broadcast-monitor-signal"
 )
-
-var (
-	internalSignalSender   *zmq.Socket
-	internalSignalReceiver *zmq.Socket
-)
-
-// Initialise - initialise node settings
-func Initialise() error {
-	var err error
-	internalSignalSender, internalSignalReceiver, err = network.NewSignalPair(signal)
-	if nil != err {
-		logger.Panic("create signal pair error")
-		return err
-	}
-
-	return err
-}
 
 // NewNode - create new node
 func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int) (intf Node, err error) {
@@ -169,24 +150,7 @@ loop:
 
 	n.Log().Info("stop")
 
-	stopInternalGoRoutines()
 	return
-}
-
-func stopInternalSignalReceiver() error {
-	if err := internalSignalReceiver.Close(); nil != err {
-		return err
-	}
-	return nil
-}
-
-func stopInternalGoRoutines() {
-	if _, err := internalSignalSender.SendMessage("stop"); nil != err {
-		logger.Criticalf("send stop message with error: %s", err)
-	}
-	if err := internalSignalSender.Close(); nil != err {
-		logger.Criticalf("send stop to internal signal with error: %s", err)
-	}
 }
 
 // StopMonitor - stop monitor

@@ -27,12 +27,6 @@ func Initialise(configs []configuration.NodeConfig, keys configuration.Keys) (No
 	var ns []node.Node
 	log := logger.New("nodes")
 
-	err := node.Initialise()
-	if nil != err {
-		log.Errorf("node initialise with error: %s", err)
-		return nil, err
-	}
-
 	for idx, c := range configs {
 		n, err := node.NewNode(c, keys, idx)
 		if nil != err {

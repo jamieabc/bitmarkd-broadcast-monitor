@@ -30,15 +30,14 @@ func receiverLoop(n Node, shutdownCh <-chan struct{}, id int) {
 					continue
 				}
 				process(n, data)
+			case <-shutdownCh:
+				return
 			}
 		}
 	}()
 
 	<-shutdownCh
 
-	if err := stopInternalSignalReceiver(); nil != err {
-		log.Errorf("stop internal signal with error: %s", err)
-	}
 	if err := n.CloseConnection(); nil != err {
 		log.Errorf("close connection with error: %s", err)
 	}

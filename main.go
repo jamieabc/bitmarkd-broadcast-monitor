@@ -67,6 +67,7 @@ func main() {
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-ch
 	log.Infof("receive signal: %v", sig)
+	log.Flush()
 
 	return
 }

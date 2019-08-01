@@ -8,16 +8,11 @@ import (
 	zmq "github.com/pebbe/zmq4"
 )
 
-type internalSignal struct {
-	receiver *zmq.Socket
-	sender   *zmq.Socket
-}
-
 // structure to hold a poll
 type poller struct {
 	sync.Mutex
 	eventChan    chan zmq.Polled
-	internalSig  internalSignal
+	signalPair   SignalPair
 	poll         *zmq.Poller
 	sockets      map[*zmq.Socket]zmq.State
 	shutdownChan <-chan struct{}
@@ -30,22 +25,21 @@ const (
 // NewPoller - create poll
 // this is just to encapsulate the zmq poll to allow removal of a socket from a socket
 func NewPoller(eventChannel chan zmq.Polled, shutdownChannel <-chan struct{}, id int) (Poller, error) {
-	var signal internalSignal
 	var err error
 
 	signalString := fmt.Sprintf(signalFormat, id)
-	signal.receiver, signal.sender, err = NewSignalPair(signalString)
+	signalPair, err := NewSignalPair(signalString)
 	if nil != err {
 		return nil, err
 	}
 
 	poll := zmq.NewPoller()
-	poll.Add(signal.receiver, zmq.POLLIN)
+	poll.Add(signalPair.Receiver(), zmq.POLLIN)
 
 	return &poller{
 		eventChan:    eventChannel,
-		internalSig:  signal,
 		poll:         poll,
+		signalPair:   signalPair,
 		shutdownChan: shutdownChannel,
 		sockets:      make(map[*zmq.Socket]zmq.State),
 	}, nil
@@ -105,8 +99,7 @@ func (p *poller) Start(timeout time.Duration) error {
 loop:
 	for _, zmqEvent := range polled {
 		switch zmqEvent.Socket {
-		case p.internalSig.receiver:
-			_ = p.internalSig.receiver.Close()
+		case p.signalPair.Receiver():
 			break loop
 		default:
 			p.eventChan <- zmqEvent
@@ -116,22 +109,13 @@ loop:
 	return nil
 }
 
-// TODO: Aaron, refactor to avoid too many level of attribute access
-func (p *poller) stop() error {
-	_, err := p.internalSig.sender.SendMessage("stop")
-	if nil != err {
-		return err
-	}
-
-	if err := p.internalSig.sender.Close(); nil != err {
-		return err
-	}
-	return nil
+func (p *poller) stop() {
+	p.signalPair.Stop()
 }
 
 func waitShutdownEvent(p *poller) {
 	<-p.shutdownChan
-	_ = p.stop()
+	p.stop()
 }
 
 // Poller - poll interface
