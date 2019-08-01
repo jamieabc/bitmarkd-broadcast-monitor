@@ -1,9 +1,18 @@
 package node
 
 import (
-	"github.com/bitmark-inc/bitmarkd/blockrecord"
+	"github.com/bitmark-inc/bitmarkd/chain"
+	"github.com/bitmark-inc/bitmarkd/merkle"
+	"github.com/bitmark-inc/bitmarkd/transactionrecord"
+	"github.com/bitmark-inc/logger"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/network"
 	zmq "github.com/pebbe/zmq4"
+)
+
+const (
+	assetCategoryStr    = "assetCategoryStr"
+	issueCategoryStr    = "issueCategoryStr"
+	transferCategoryStr = "transferCategoryStr"
 )
 
 func receiverLoop(n Node, shutdownCh <-chan struct{}, id int) {
@@ -47,29 +56,44 @@ func receiverLoop(n Node, shutdownCh <-chan struct{}, id int) {
 }
 
 func process(n Node, data [][]byte) {
-	chain := data[0]
 	log := n.Log()
+	blockchain := string(data[0])
+	if !chain.Valid(blockchain) {
+		log.Errorf("invalid chain: %s", blockchain)
+		return
+	}
 
-	switch d := data[1]; string(d) {
-	case "block":
-		log.Debugf("block: %x", data[2])
-		header, digest, _, err := blockrecord.ExtractHeader(data[2])
+	switch category := string(data[1]); category {
+	case assetCategoryStr, issueCategoryStr, transferCategoryStr:
+		trx := data[2]
+
+		log.Infof("receive %s record", category)
+		log.Debugf("transactions: %x", trx)
+
+		txID, err := transactionID(trx, blockchain, log)
 		if nil != err {
-			log.Errorf("extract header with error: %s", err)
 			return
 		}
-
-		log.Infof("receive chain %s, block %d, previous block %s, digest: %s",
-			chain,
-			header.Number,
-			header.PreviousBlock.String(),
-			digest.String(),
-		)
+		log.Infof("transaction ID: %s", txID)
 
 	case "heart":
 		log.Infof("receive heartbeat")
 
 	default:
-		log.Infof("receive %s", d)
+		log.Infof("receive %s", category)
 	}
+}
+
+func transactionID(trx []byte, chain string, log *logger.L) (merkle.Digest, error) {
+	_, n, err := transactionrecord.Packed(trx).Unpack(isTestnet(chain))
+	if nil != err {
+		log.Errorf("unpack transaction with error: %s", err)
+		return merkle.Digest{}, err
+	}
+	txID := transactionrecord.Packed(trx[:n]).MakeLink()
+	return txID, nil
+}
+
+func isTestnet(category string) bool {
+	return chain.Bitmark != category
 }
