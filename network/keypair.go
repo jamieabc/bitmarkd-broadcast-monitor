@@ -16,7 +16,7 @@ const (
 
 // read a public key from a string returning it as a 32 byte string
 func ReadPublicKey(key string) ([]byte, error) {
-	data, private, err := ParseKey(key)
+	data, private, err := parseKey(key)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -28,7 +28,7 @@ func ReadPublicKey(key string) ([]byte, error) {
 
 // read a private key from a string returning it as a 32 byte string
 func ReadPrivateKey(key string) ([]byte, error) {
-	data, private, err := ParseKey(key)
+	data, private, err := parseKey(key)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -38,9 +38,9 @@ func ReadPrivateKey(key string) ([]byte, error) {
 	return data, err
 }
 
-// ParseKey - parse key
-func ParseKey(data string) ([]byte, bool, error) {
-	s := strings.TrimSpace(string(data))
+// parseKey - parse key
+func parseKey(data string) ([]byte, bool, error) {
+	s := strings.TrimSpace(data)
 	if strings.HasPrefix(s, taggedPrivate) {
 		h, err := hex.DecodeString(s[len(taggedPrivate):])
 		if err != nil {

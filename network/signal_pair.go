@@ -5,8 +5,8 @@ import (
 	zmq "github.com/pebbe/zmq4"
 )
 
-// SignalPair - zmq signal pair for receiving signal
-type SignalPair interface {
+// signalPairer - zmq signal pair for receiving signal
+type signalPairer interface {
 	ReceiverChan() <-chan string
 	Receiver() *zmq.Socket
 	Start()
@@ -57,6 +57,7 @@ func (s *signalPair) receiverLoop(shutdownChan chan struct{}) {
 	}
 }
 
+// Stop - stop signal pair
 func (s *signalPair) Stop() {
 	_ = s.stopSender()
 }
@@ -84,8 +85,8 @@ func (s *signalPair) Send(msg interface{}) error {
 	return nil
 }
 
-// NewSignalPair - new signal pair
-func NewSignalPair(signal string) (SignalPair, error) {
+// newSignalPair - new signal pair
+func newSignalPair(signal string) (signalPairer, error) {
 	// PAIR server, half of signalling channel
 	receiver, err := zmq4.NewSocket(zmq4.PAIR)
 	if nil != err {
@@ -95,25 +96,31 @@ func NewSignalPair(signal string) (SignalPair, error) {
 	_ = receiver.SetLinger(0)
 	err = receiver.Bind(signal)
 	if nil != err {
-		_ = receiver.Close()
+		closeSocket(receiver)
 		return nil, err
 	}
 
 	// PAIR client, half of signalling channel
 	sender, err := zmq4.NewSocket(zmq4.PAIR)
-	if nil != err && nil != sender {
-		_ = sender.Close()
+	if nil != err {
+		closeSocket(sender)
 		return nil, err
 	}
 
 	_ = sender.SetLinger(0)
 	err = sender.Connect(signal)
 	if nil != err {
-		_ = sender.Close()
+		closeSocket(sender)
 		return nil, err
 	}
 
 	ch := make(chan string, chanSize)
 
 	return &signalPair{sender, receiver, ch}, nil
+}
+
+func closeSocket(socket *zmq.Socket) {
+	if nil != socket {
+		_ = socket.Close()
+	}
 }

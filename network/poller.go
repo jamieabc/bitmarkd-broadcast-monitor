@@ -12,7 +12,7 @@ import (
 type poller struct {
 	sync.Mutex
 	eventChan    chan zmq.Polled
-	signalPair   SignalPair
+	signalPair   signalPairer
 	poll         *zmq.Poller
 	sockets      map[*zmq.Socket]zmq.State
 	shutdownChan <-chan struct{}
@@ -22,13 +22,13 @@ const (
 	signalFormat = "inproc://monitor-poll-internal-signal-%d"
 )
 
-// NewPoller - create poll
+// NewPoller - create poller
 // this is just to encapsulate the zmq poll to allow removal of a socket from a socket
 func NewPoller(eventChannel chan zmq.Polled, shutdownChannel <-chan struct{}, id int) (Poller, error) {
 	var err error
 
 	signalString := fmt.Sprintf(signalFormat, id)
-	signalPair, err := NewSignalPair(signalString)
+	signalPair, err := newSignalPair(signalString)
 	if nil != err {
 		return nil, err
 	}

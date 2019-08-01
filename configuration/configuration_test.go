@@ -72,9 +72,7 @@ func TestParse(t *testing.T) {
 	setupConfigurationTestFile()
 	defer teardownTestFile()
 
-	assert := assert.New(t)
-
-	config, err := configuration.Parse(testFile)
+	config, _ := configuration.Parse(testFile)
 	actual := config.Data()
 
 	node1 := configuration.NodeConfig{
@@ -98,11 +96,10 @@ func TestParse(t *testing.T) {
 		Private: "2222",
 	}
 
-	assert.Equal(nil, err, "parse fail")
-	assert.Equal(keys, actual.Keys, "wrong key")
-	assert.Equal(2, len(actual.Nodes), "wrong nodes")
-	assert.Equal(node1, actual.Nodes[0], "different node info")
-	assert.Equal(node2, actual.Nodes[1], "different node info")
+	assert.Equal(t, keys, actual.Keys, "wrong key")
+	assert.Equal(t, 2, len(actual.Nodes), "wrong nodes")
+	assert.Equal(t, node1, actual.Nodes[0], "different node info")
+	assert.Equal(t, node2, actual.Nodes[1], "different node info")
 }
 
 func TestString(t *testing.T) {
