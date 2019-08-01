@@ -52,11 +52,11 @@ func NewConnection(hostPort string) (*Connection, error) {
 	return c, nil
 }
 
-// CanonicalIPandPort - make IP:Port into canonical string, returns prefixed string and IPv6 flag
+// canonicalIPandPort - make IP:Port into canonical string, returns prefixed string and IPv6 flag
 // prefix is optional and can be empty ("")
 // IPv4:  127.0.0.1:1234
 // IPv6:  [::1]:1234
-func (c *Connection) CanonicalIPandPort(prefix string) (string, bool) {
+func (c *Connection) canonicalIPandPort(prefix string) (string, bool) {
 	port := int(c.port)
 	if nil != c.ip.To4() {
 		return prefix + c.ip.String() + ":" + strconv.Itoa(port), false

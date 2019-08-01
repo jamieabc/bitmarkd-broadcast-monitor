@@ -269,7 +269,7 @@ func (client *client) Connect(conn *Connection, serverPublicKey []byte, prefix s
 
 	copy(client.serverPublicKey, serverPublicKey)
 
-	client.address, client.v6 = conn.CanonicalIPandPort("tcp://")
+	client.address, client.v6 = conn.canonicalIPandPort("tcp://")
 
 	client.timestamp = time.Now()
 
