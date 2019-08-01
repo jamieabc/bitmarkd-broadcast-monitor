@@ -186,22 +186,6 @@ func (client *client) openSocket() error {
 		goto failure
 	}
 
-	// ***** FIX THIS: enabling this causes complete failure
-	// ***** FIX THIS: socket disconnects, perhaps after IVL value
-	// heartbeat (constants from socket.go)
-	// err = socket.SetHeartbeatIvl(heartbeatInterval)
-	// if nil != err {
-	// 	goto failure
-	// }
-	// err = socket.SetHeartbeatTimeout(heartbeatTimeout)
-	// if nil != err {
-	// 	goto failure
-	// }
-	// err = socket.SetHeartbeatTtl(heartbeatTTL)
-	// if nil != err {
-	// 	goto failure
-	// }
-
 	// see socket.go for constants
 	err = socket.SetMaxmsgsize(maximumPacketSize)
 	if nil != err {
@@ -301,16 +285,6 @@ func (client *client) IsConnected() bool {
 func (client *client) IsConnectedTo(serverPublicKey []byte) bool {
 	return bytes.Equal(client.serverPublicKey, serverPublicKey)
 }
-
-// // check if not connected to any node
-// func (client *client) IsDisconnected() bool {
-// 	return "" == client.address
-// }
-
-// // get the age of connection
-// func (client *client) Age() time.Duration {
-// 	return time.Since(client.timestamp)
-// }
 
 // close and reopen the connection
 func (client *client) Reconnect() error {
