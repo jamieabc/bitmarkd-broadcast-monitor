@@ -1,7 +1,6 @@
 package recorder
 
 import (
-	"fmt"
 	"math"
 	"sync"
 	"time"
@@ -22,7 +21,7 @@ type HeartbeatSummary struct {
 }
 
 // Add - add received heartbeat record
-func (h *heartbeat) Add(t time.Time, v ...interface{}) {
+func (h *heartbeat) Add(t time.Time, args ...interface{}) {
 	h.Lock()
 	defer h.Unlock()
 
@@ -70,8 +69,6 @@ func (h *heartbeat) Summary() interface{} {
 
 func (h *heartbeat) droprate(duration time.Duration, actualReceived uint16) float64 {
 	expectedCount := math.Floor(duration.Seconds()/h.intervalSecond) + 1
-	fmt.Printf("expectedCount: %f\n", expectedCount)
-	fmt.Printf("actual recunt: %d\n", actualReceived)
 	if 0 == expectedCount {
 		return float64(0)
 	}

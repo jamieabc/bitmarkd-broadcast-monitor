@@ -34,20 +34,6 @@ func TestHeartbeatSummaryWhenSingle(t *testing.T) {
 	assert.Equal(t, float64(0), summary.Droprate, "wrong drop rate")
 }
 
-func TestHeartbeatSummaryWhenEnough(t *testing.T) {
-	r := recorder.NewHeartbeat(heartbeatInterval)
-	now := time.Now()
-	size := 15
-	for i := 0; i < size; i++ {
-		r.Add(now.Add(time.Duration(i) * time.Second))
-	}
-	summary := r.Summary().(*recorder.HeartbeatSummary)
-
-	assert.Equal(t, time.Duration(14)*time.Second, summary.Duration, "wrong duration")
-	assert.Equal(t, uint16(15), summary.ReceivedCount, "wrong heartbeat count")
-	assert.Equal(t, float64(0), summary.Droprate, "wrong droprate")
-}
-
 func TestHeartbeatSummaryWhenEdge(t *testing.T) {
 	r := recorder.NewHeartbeat(heartbeatInterval)
 	now := time.Now()
@@ -92,4 +78,18 @@ func TestHeartbeatSummaryWhenDrop(t *testing.T) {
 	assert.Equal(t, time.Duration(size-1)*time.Second, summary.Duration, "wrong duration")
 	assert.Equal(t, uint16(size-3), summary.ReceivedCount, "wrong heartbeat count")
 	assert.Equal(t, float64(3*100/size), summary.Droprate, "wrong droprate")
+}
+
+func TestHeartbeatSummaryWhenEnough(t *testing.T) {
+	r := recorder.NewHeartbeat(heartbeatInterval)
+	now := time.Now()
+	size := 15
+	for i := 0; i < size; i++ {
+		r.Add(now.Add(time.Duration(i) * time.Second))
+	}
+	summary := r.Summary().(*recorder.HeartbeatSummary)
+
+	assert.Equal(t, time.Duration(14)*time.Second, summary.Duration, "wrong duration")
+	assert.Equal(t, uint16(15), summary.ReceivedCount, "wrong heartbeat count")
+	assert.Equal(t, float64(0), summary.Droprate, "wrong droprate")
 }
