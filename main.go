@@ -1,21 +1,18 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/bitmark-inc/bitmarkd/zmqutil"
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/fault"
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/network"
+
 	"github.com/bitmark-inc/logger"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/configuration"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/nodes"
-)
-
-const (
-	errEmptyConfigFile = "empty config file"
 )
 
 var (
@@ -70,6 +67,7 @@ func main() {
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-ch
 	log.Infof("receive signal: %v", sig)
+	log.Flush()
 
 	return
 }
@@ -79,13 +77,13 @@ func parseFlag() error {
 
 	if "" == configFile {
 		flag.Usage()
-		fmt.Fprintf(os.Stderr, "\n%s\n", errEmptyConfigFile)
-		return errors.New(errEmptyConfigFile)
+		_, _ = fmt.Fprintf(os.Stderr, "\n%s\n", fault.InvalidEmptyConfigFile)
+		return fault.InvalidEmptyConfigFile
 	}
 
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr, "config file: %s, err: %s\n", configFile, errEmptyConfigFile)
-		return errors.New(errEmptyConfigFile)
+		_, _ = fmt.Fprintf(os.Stderr, "config file: %s, err: %s\n", configFile, fault.InvalidEmptyConfigFile)
+		return fault.InvalidEmptyConfigFile
 	}
 
 	return nil
@@ -94,16 +92,16 @@ func parseFlag() error {
 func initializeLogger(config configuration.Configuration) error {
 	err := logger.Initialise(config.LogConfig())
 	if nil != err {
-		fmt.Fprintf(os.Stderr, "\n%s\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "\n%s\n", err)
 		return err
 	}
 	return nil
 }
 
 func zmqAuth() error {
-	err := zmqutil.StartAuthentication()
+	err := network.StartAuthentication()
 	if nil != err {
-		fmt.Fprintf(os.Stderr, "zmq auth fail with error: %s\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "zmq auth fail with error: %s\n", err)
 		return err
 	}
 	return nil

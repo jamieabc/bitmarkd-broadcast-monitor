@@ -20,12 +20,16 @@ func setupConfigurationTestFile() {
 local M = {}
 M.nodes = {
   {
-    address_ipv4 = "127.0.0.1:1234",
+    address_ipv4 = "127.0.0.1",
+    broadcast_port = "1234",
+    command_port = "4321",
     public_key = "abcdef",
     chain = "bitmark",
   },
   {
-    address_ipv4 = "127.0.0.1:5678",
+    address_ipv4 = "127.0.0.1",
+    broadcast_port = "5678",
+    command_port = "8765",
     public_key = "wxyz",
     chain = "testing",
   },
@@ -45,6 +49,8 @@ M.logging = {
         DEFAULT = "error",
     },
 }
+
+M.heartbeat_interval_second = 60
 return M
 `)
 
@@ -59,28 +65,30 @@ func teardownTestFile() {
 		return
 	}
 
-	os.Remove(testFile)
+	_ = os.Remove(testFile)
 }
 
 func TestParse(t *testing.T) {
 	setupConfigurationTestFile()
 	defer teardownTestFile()
 
-	assert := assert.New(t)
-
-	config, err := configuration.Parse(testFile)
+	config, _ := configuration.Parse(testFile)
 	actual := config.Data()
 
 	node1 := configuration.NodeConfig{
-		AddressIPv4: "127.0.0.1:1234",
-		PublicKey:   "abcdef",
-		Chain:       "bitmark",
+		AddressIPv4:   "127.0.0.1",
+		BroadcastPort: "1234",
+		CommandPort:   "4321",
+		PublicKey:     "abcdef",
+		Chain:         "bitmark",
 	}
 
 	node2 := configuration.NodeConfig{
-		AddressIPv4: "127.0.0.1:5678",
-		PublicKey:   "wxyz",
-		Chain:       "testing",
+		AddressIPv4:   "127.0.0.1",
+		BroadcastPort: "5678",
+		CommandPort:   "8765",
+		PublicKey:     "wxyz",
+		Chain:         "testing",
 	}
 
 	keys := configuration.Keys{
@@ -88,11 +96,10 @@ func TestParse(t *testing.T) {
 		Private: "2222",
 	}
 
-	assert.Equal(nil, err, "parse fail")
-	assert.Equal(keys, actual.Keys, "wrong key")
-	assert.Equal(2, len(actual.Nodes), "wrong nodes")
-	assert.Equal(node1, actual.Nodes[0], "different node info")
-	assert.Equal(node2, actual.Nodes[1], "different node info")
+	assert.Equal(t, keys, actual.Keys, "wrong key")
+	assert.Equal(t, 2, len(actual.Nodes), "wrong nodes")
+	assert.Equal(t, node1, actual.Nodes[0], "different node info")
+	assert.Equal(t, node2, actual.Nodes[1], "different node info")
 }
 
 func TestString(t *testing.T) {
@@ -104,12 +111,17 @@ func TestString(t *testing.T) {
 
 	assert.Contains(t, actual, "1111", "wrong public key")
 	assert.Contains(t, actual, "2222", "wrong private key")
-	assert.Contains(t, actual, "127.0.0.1:1234", "wrong node 1 address")
+	assert.Contains(t, actual, "127.0.0.1", "wrong node 1 address")
+	assert.Contains(t, actual, "1234", "wrong node 1 broadcast port")
+	assert.Contains(t, actual, "4321", "wrong node 1 command port")
 	assert.Contains(t, actual, "abcdef", "wrong node 1 public key")
 	assert.Contains(t, actual, "bitmark", "wrong node 1 chain")
-	assert.Contains(t, actual, "127.0.0.1:5678", "wrong node 2 address")
+	assert.Contains(t, actual, "127.0.0.1", "wrong node 2 address")
+	assert.Contains(t, actual, "5678", "wrong node 2 broadcast port")
+	assert.Contains(t, actual, "8765", "wrong node 2 command port")
 	assert.Contains(t, actual, "wxyz", "wrong node 2 public key")
 	assert.Contains(t, actual, "testing", "wrong node 2 chain")
+	assert.Contains(t, actual, "60", "wrong heartbeat interval")
 }
 
 func TestLogging(t *testing.T) {
@@ -124,12 +136,13 @@ func TestLogging(t *testing.T) {
 		Directory: "log",
 		Count:     10,
 		Console:   false,
+		File:      "monitor.log",
 		Levels: map[string]string{
 			"DEFAULT": "error",
 		},
 	}
 
-	assert.Equal(t, expected, logConfig, ("wrong log config"))
+	assert.Equal(t, expected, logConfig, "wrong log config")
 }
 
 func TestNodesConfig(t *testing.T) {
@@ -137,15 +150,19 @@ func TestNodesConfig(t *testing.T) {
 	defer teardownTestFile()
 
 	node1 := configuration.NodeConfig{
-		AddressIPv4: "127.0.0.1:1234",
-		PublicKey:   "abcdef",
-		Chain:       "bitmark",
+		AddressIPv4:   "127.0.0.1",
+		BroadcastPort: "1234",
+		CommandPort:   "4321",
+		PublicKey:     "abcdef",
+		Chain:         "bitmark",
 	}
 
 	node2 := configuration.NodeConfig{
-		AddressIPv4: "127.0.0.1:5678",
-		PublicKey:   "wxyz",
-		Chain:       "testing",
+		AddressIPv4:   "127.0.0.1",
+		BroadcastPort: "5678",
+		CommandPort:   "8765",
+		PublicKey:     "wxyz",
+		Chain:         "testing",
 	}
 
 	config, _ := configuration.Parse(testFile)
@@ -169,4 +186,14 @@ func TestKey(t *testing.T) {
 	actual := config.Key()
 
 	assert.Equal(t, expected, actual, "wrong key")
+}
+
+func TestHeartbeatIntervalInSecond(t *testing.T) {
+	setupConfigurationTestFile()
+	defer teardownTestFile()
+
+	config, _ := configuration.Parse(testFile)
+	heartbeatInterval := config.HeartbeatIntervalInSecond()
+
+	assert.Equal(t, 60, heartbeatInterval, "wrong heartbeat interval")
 }
