@@ -7,20 +7,13 @@ import (
 //Recorder - recorder interface
 type Recorder interface {
 	Add(time.Time, ...interface{})
+	CleanupPeriodically()
 	Summary() interface{}
 }
 
-func nextID(idx int) int {
-	if recordSize-1 == idx {
-		return 0
-	} else {
-		return idx + 1
-	}
-}
+type expiredAt time.Time
+type receivedAt time.Time
 
-func prevID(currentID int) int {
-	if 0 == currentID {
-		return recordSize - 1
-	}
-	return currentID - 1
-}
+const (
+	expiredTimeInterval = 2 * time.Hour
+)

@@ -8,7 +8,7 @@ import (
 
 type heartbeat struct {
 	sync.Mutex
-	data           [recordSize]time.Time
+	data           map[receivedAt]expiredAt
 	nextItemID     int
 	intervalSecond float64
 }
@@ -20,55 +20,54 @@ type HeartbeatSummary struct {
 	Droprate      float64
 }
 
-const (
-	recordSize = 90
-)
-
 //Add - add received heartbeat record
 func (h *heartbeat) Add(t time.Time, args ...interface{}) {
 	h.Lock()
 	defer h.Unlock()
 
-	h.data[h.nextItemID] = t
-	h.nextItemID = nextID(h.nextItemID)
+	h.data[receivedAt(t)] = expiredAt(t.Add(expiredTimeInterval))
 }
 
-//Summary -summarize heartbeat data
+func (h *heartbeat) CleanupPeriodically() {
+}
+
+//Summary - summarize heartbeat data
 func (h *heartbeat) Summary() interface{} {
 	h.Lock()
 	defer h.Unlock()
 
-	min := h.data[0]
-	count := uint16(0)
-
-	for i := 0; i < recordSize; i++ {
-		if (time.Time{}) != h.data[i] {
-			count++
-			if h.data[i].Before(min) {
-				min = h.data[i]
-			}
-		} else {
-			break
-		}
-	}
-
-	latestReceiveTime := h.data[prevID(h.nextItemID)]
-
-	if (time.Time{}) == min || latestReceiveTime.Before(min) {
+	count := uint16(len(h.data))
+	if 0 == count {
 		return &HeartbeatSummary{
 			Duration:      0,
-			ReceivedCount: count,
+			ReceivedCount: 0,
 			Droprate:      0,
 		}
 	}
 
-	duration := latestReceiveTime.Sub(min)
+	earliest, latest := findEarliestAndLatest(h.data)
+	duration := time.Time(latest).Sub(time.Time(earliest))
 
 	return &HeartbeatSummary{
 		Duration:      duration,
-		ReceivedCount: count,
+		ReceivedCount: uint16(len(h.data)),
 		Droprate:      h.droprate(duration, count),
 	}
+}
+
+func findEarliestAndLatest(data map[receivedAt]expiredAt) (expiredAt, expiredAt) {
+	earliest := expiredAt(time.Time{})
+	latest := expiredAt(time.Time{})
+	for _, v := range data {
+		if expiredAt(time.Time{}) == earliest || time.Time(earliest).After(time.Time(v)) {
+			earliest = v
+		}
+
+		if expiredAt(time.Time{}) == latest || time.Time(latest).Before(time.Time(v)) {
+			latest = v
+		}
+	}
+	return earliest, latest
 }
 
 func (h *heartbeat) droprate(duration time.Duration, actualReceived uint16) float64 {
@@ -83,6 +82,7 @@ func (h *heartbeat) droprate(duration time.Duration, actualReceived uint16) floa
 //NewHeartbeat - new heartbeat
 func NewHeartbeat(intervalSecond float64) Recorder {
 	return &heartbeat{
+		data:           make(map[receivedAt]expiredAt),
 		intervalSecond: intervalSecond,
 	}
 }

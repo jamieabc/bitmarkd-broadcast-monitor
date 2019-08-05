@@ -9,8 +9,18 @@ import (
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/recorder"
 )
 
+var shutdownChan chan struct{}
+
+func init() {
+	shutdownChan = make(chan struct{})
+}
+
+func setupTransaction() {
+	recorder.Initialise(shutdownChan)
+}
+
 func TestSummaryWhenEmpty(t *testing.T) {
-	recorder.Initialise()
+	setupTransaction()
 	r := recorder.NewTransaction()
 	summary := r.Summary().(*recorder.TransactionSummary)
 
@@ -18,7 +28,7 @@ func TestSummaryWhenEmpty(t *testing.T) {
 }
 
 func TestSummaryWhenNoDrop(t *testing.T) {
-	recorder.Initialise()
+	setupTransaction()
 	r := recorder.NewTransaction()
 	now := time.Now()
 	txID := "this is test"
@@ -29,7 +39,7 @@ func TestSummaryWhenNoDrop(t *testing.T) {
 }
 
 func TestSummaryWhenDropWithDistinct(t *testing.T) {
-	recorder.Initialise()
+	setupTransaction()
 	r1 := recorder.NewTransaction()
 	r2 := recorder.NewTransaction()
 	txID1 := "id1"
@@ -47,7 +57,7 @@ func TestSummaryWhenDropWithDistinct(t *testing.T) {
 }
 
 func TestSummaryWhenDropWithSame(t *testing.T) {
-	recorder.Initialise()
+	setupTransaction()
 	r1 := recorder.NewTransaction()
 	r2 := recorder.NewTransaction()
 	txID := "id"

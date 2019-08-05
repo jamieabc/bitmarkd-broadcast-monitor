@@ -52,14 +52,13 @@ func TestHeartbeatSummaryWhenCycle(t *testing.T) {
 	r := recorder.NewHeartbeat(heartbeatInterval)
 	now := time.Now()
 	size := 100
-	recordSize := 90
 	for i := 0; i < size; i++ {
 		r.Add(now.Add(time.Duration(i) * time.Second))
 	}
 	summary := r.Summary().(*recorder.HeartbeatSummary)
 
-	assert.Equal(t, time.Duration(recordSize-1)*time.Second, summary.Duration, "wrong duration")
-	assert.Equal(t, uint16(recordSize), summary.ReceivedCount, "wrong heartbeat count")
+	assert.Equal(t, time.Duration(size-1)*time.Second, summary.Duration, "wrong duration")
+	assert.Equal(t, uint16(size), summary.ReceivedCount, "wrong heartbeat count")
 	assert.Equal(t, float64(0), summary.Droprate, "wrong droprate")
 }
 

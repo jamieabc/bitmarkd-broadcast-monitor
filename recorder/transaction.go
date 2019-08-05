@@ -6,8 +6,6 @@ import (
 	"time"
 )
 
-type expiredAt time.Time
-
 type transactions struct {
 	sync.Mutex
 	data       map[string]expiredAt
@@ -25,6 +23,7 @@ const (
 
 //this variable stores superset of all transactions
 var globalData *transactions
+var shutdownChan <-chan struct{}
 
 //Add - Add transactions
 func (t *transactions) Add(receivedTime time.Time, args ...interface{}) {
@@ -45,6 +44,10 @@ func (t *transactions) isTxIDExist(txID string) bool {
 	t.Unlock()
 
 	return ok
+}
+
+func (t *transactions) CleanupPeriodically() {
+
 }
 
 //Summary - summarize transactions info, mainly droprate
@@ -68,8 +71,9 @@ func AddTransaction(t Recorder, receivedTime time.Time, txID string) {
 }
 
 //Initialise
-func Initialise() {
+func Initialise(shutdownCh <-chan struct{}) {
 	globalData = newTransaction()
+	shutdownChan = shutdownCh
 }
 
 func newTransaction() *transactions {
@@ -81,4 +85,14 @@ func newTransaction() *transactions {
 //NewTransaction - new transaction
 func NewTransaction() Recorder {
 	return newTransaction()
+}
+
+func periodRecycleTransaction() {
+	timer := time.After(expiredTimeInterval)
+	for {
+		select {
+		case <-timer:
+			timer = time.After(txArriveDelayTime)
+		}
+	}
 }
