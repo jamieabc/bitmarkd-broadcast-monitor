@@ -26,6 +26,8 @@ type nodes struct {
 func Initialise(configs []configuration.NodeConfig, keys configuration.Keys) (Nodes, error) {
 	var ns []node.Node
 	log := logger.New("nodes")
+	shutdownChan := make(chan struct{})
+	node.Initialise(shutdownChan)
 
 	for idx, c := range configs {
 		n, err := node.NewNode(c, keys, idx)
@@ -38,7 +40,7 @@ func Initialise(configs []configuration.NodeConfig, keys configuration.Keys) (No
 	return &nodes{
 		log:      log,
 		nodeArr:  ns,
-		shutdown: make(chan struct{}),
+		shutdown: shutdownChan,
 	}, nil
 }
 
@@ -48,15 +50,14 @@ func (n *nodes) DropRate() {
 
 //Monitor - start monitor
 func (n *nodes) Monitor() {
-	nodeShutdown := make(chan struct{})
 	n.log.Info("start monitor")
 	for _, connectedNode := range n.nodeArr {
-		go connectedNode.Monitor(nodeShutdown)
+		go connectedNode.Monitor()
 	}
 
 	select {
 	case <-n.shutdown:
-		nodeShutdown <- struct{}{}
+		n.shutdown <- struct{}{}
 		n.log.Info("receive stop signal")
 		break
 	}

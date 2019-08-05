@@ -20,7 +20,7 @@ type Node interface {
 	CloseConnection() error
 	DropRate()
 	Log() *logger.L
-	Monitor(shutdown <-chan struct{})
+	Monitor()
 	StopMonitor()
 	Verify()
 }
@@ -43,6 +43,15 @@ const (
 	receiveBroadcastIntervalInSecond = 120 * time.Second
 	checkIntervalSecond              = 10 * time.Second
 )
+
+var (
+	shutdownChan <-chan struct{}
+)
+
+//Initialise
+func Initialise(shutdown <-chan struct{}) {
+	shutdownChan = shutdown
+}
 
 //NewNode - create new node
 func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int) (intf Node, err error) {
@@ -137,14 +146,15 @@ func (n *node) Log() *logger.L {
 }
 
 //Monitor - start to monitor
-func (n *node) Monitor(shutdownCh <-chan struct{}) {
-	go receiverLoop(n, shutdownCh, n.id)
+func (n *node) Monitor() {
+	go receiverLoop(n, shutdownChan, n.id)
+
 	n.checkTimer.Reset(checkIntervalSecond)
-	go checkerLoop(n, shutdownCh)
+	go checkerLoop(n, shutdownChan)
 
 loop:
 	select {
-	case <-shutdownCh:
+	case <-shutdownChan:
 		break loop
 	}
 
