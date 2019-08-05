@@ -149,7 +149,6 @@ loop:
 	}
 
 	n.Log().Info("stop")
-
 	return
 }
 

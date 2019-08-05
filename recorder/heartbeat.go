@@ -99,11 +99,12 @@ func findEarliestAndLatest(data map[receivedAt]expiredAt) (expiredAt, expiredAt)
 
 func (h *heartbeat) droprate(duration time.Duration, actualReceived uint16) float64 {
 	expectedCount := math.Floor(duration.Seconds()/h.intervalSecond) + 1
-	if 0 == expectedCount {
+	if 0 == expectedCount || expectedCount == float64(actualReceived) {
 		return float64(0)
 	}
 
-	return (expectedCount - float64(actualReceived)) * 100 / expectedCount
+	result := (expectedCount - float64(actualReceived)) / expectedCount
+	return result
 }
 
 //NewHeartbeat - new heartbeat

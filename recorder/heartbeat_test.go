@@ -88,7 +88,7 @@ func TestHeartbeatSummaryWhenDrop(t *testing.T) {
 
 	assert.Equal(t, time.Duration(size-1)*time.Second, summary.Duration, "wrong duration")
 	assert.Equal(t, uint16(size-3), summary.ReceivedCount, "wrong heartbeat count")
-	assert.Equal(t, float64(3*100/size), summary.Droprate, "wrong droprate")
+	assert.Equal(t, float64(3.0)/float64(size), summary.Droprate, "wrong droprate")
 }
 
 func TestHeartbeatSummaryWhenEnough(t *testing.T) {
@@ -105,7 +105,7 @@ func TestHeartbeatSummaryWhenEnough(t *testing.T) {
 	assert.Equal(t, float64(0), summary.Droprate, "wrong droprate")
 }
 
-func TestHeartbeatCleanupPeriodically(t *testing.T) {
+func TestHeartbeatCleanupPeriodicallyWhenExpiration(t *testing.T) {
 	ctl, mock := setupTestClock(t)
 	defer ctl.Finish()
 
@@ -114,12 +114,39 @@ func TestHeartbeatCleanupPeriodically(t *testing.T) {
 	r := setupHeartbeat()
 	now := time.Now()
 	r.Add(now.Add(-1 * expiredTimeInterval))
+	r.Add(now)
+	expectedCount := expiredTimeInterval/(heartbeatInterval*time.Second) + 1
+	droprate := float64(expectedCount-2) / float64(expectedCount)
 	summary := r.Summary().(*recorder.HeartbeatSummary)
-	assert.Equal(t, uint16(1), summary.ReceivedCount, "wrong count")
+
+	assert.Equal(t, uint16(2), summary.ReceivedCount, "wrong count")
+	assert.Equal(t, droprate, summary.Droprate, "wrong droprate")
 
 	go r.CleanupPeriodically(mock)
 	<-time.After(10 * time.Millisecond)
 	heartbeatShutdownChan <- struct{}{}
 	summary = r.Summary().(*recorder.HeartbeatSummary)
-	assert.Equal(t, uint16(0), summary.ReceivedCount, "wrong count")
+	assert.Equal(t, uint16(1), summary.ReceivedCount, "wrong count")
+	assert.Equal(t, float64(0), summary.Droprate, "wrong droprate")
+}
+
+func TestHeartbeatCleanupPeriodicallyWhenNoExpiration(t *testing.T) {
+	ctl, mock := setupTestClock(t)
+	defer ctl.Finish()
+
+	mock.EXPECT().After(gomock.Any()).Return(time.After(1)).Times(2)
+
+	r := setupHeartbeat()
+	now := time.Now()
+	r.Add(now.Add(-10 * time.Second))
+	summary := r.Summary().(*recorder.HeartbeatSummary)
+	assert.Equal(t, uint16(1), summary.ReceivedCount, "wrong count")
+	assert.Equal(t, float64(0), summary.Droprate, "wrong droprate")
+
+	go r.CleanupPeriodically(mock)
+	<-time.After(10 * time.Millisecond)
+	heartbeatShutdownChan <- struct{}{}
+	summary = r.Summary().(*recorder.HeartbeatSummary)
+	assert.Equal(t, uint16(1), summary.ReceivedCount, "wrong count")
+	assert.Equal(t, float64(0), summary.Droprate, "wrong droprate")
 }
