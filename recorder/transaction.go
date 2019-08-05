@@ -6,14 +6,11 @@ import (
 	"time"
 )
 
-type transaction struct {
-	expiredAt time.Time
-	txID      string
-}
+type expiredAt time.Time
 
 type transactions struct {
 	sync.Mutex
-	data       [recordSize]transaction
+	data       map[string]expiredAt
 	nextItemID int
 }
 
@@ -26,10 +23,10 @@ const (
 	txArriveDelayTime = 1 * time.Minute
 )
 
-// this variable stores superset of each node's transaction
+// this variable stores superset of all transactions
 var globalData transactions
 
-//Add - Add transaction
+//Add - Add transactions
 func (t *transactions) Add(receivedTime time.Time, args ...interface{}) {
 	arg := args[0]
 	txID := fmt.Sprintf("%v", arg)
@@ -37,30 +34,20 @@ func (t *transactions) Add(receivedTime time.Time, args ...interface{}) {
 		return
 	}
 
-	newTX := transaction{
-		expiredAt: receivedTime.Add(txArriveDelayTime),
-		txID:      txID,
-	}
-
 	t.Lock()
-	t.data[t.nextItemID] = newTX
-	t.nextItemID = nextID(t.nextItemID)
+	t.data[txID] = expiredAt(receivedTime.Add(txArriveDelayTime))
 	t.Unlock()
 }
 
 func (t *transactions) isTxIDExist(txID string) bool {
-	for _, item := range t.data {
-		if (transaction{}) == item {
-			return false
-		}
-		if txID == item.txID {
-			return true
-		}
-	}
-	return false
+	t.Lock()
+	_, ok := t.data[txID]
+	t.Unlock()
+
+	return ok
 }
 
-//Summary - summarize transaction
+//Summary - summarize transactions info, mainly droprate
 func (t *transactions) Summary() interface{} {
 	globalCount := recordCount(&globalData)
 	if 0 == globalCount {
@@ -71,13 +58,10 @@ func (t *transactions) Summary() interface{} {
 }
 
 func recordCount(t *transactions) int {
-	if (transaction{}) == t.data[t.nextItemID] {
-		return t.nextItemID
-	}
-	return recordSize
+	return len(t.data)
 }
 
-//AddTransaction - add transaction
+//AddTransaction - add transation
 func AddTransaction(t Recorder, receivedTime time.Time, txID string) {
 	t.Add(receivedTime, txID)
 	globalData.Add(receivedTime, txID)
@@ -85,10 +69,14 @@ func AddTransaction(t Recorder, receivedTime time.Time, txID string) {
 
 //Initialise
 func Initialise() {
-	globalData = transactions{}
+	globalData = transactions{
+		data: make(map[string]expiredAt),
+	}
 }
 
 // NewTransaction - new transaction
 func NewTransaction() Recorder {
-	return &transactions{}
+	return &transactions{
+		data: make(map[string]expiredAt),
+	}
 }

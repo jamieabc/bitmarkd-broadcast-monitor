@@ -20,6 +20,10 @@ type HeartbeatSummary struct {
 	Droprate      float64
 }
 
+const (
+	recordSize = 90
+)
+
 // Add - add received heartbeat record
 func (h *heartbeat) Add(t time.Time, args ...interface{}) {
 	h.Lock()
