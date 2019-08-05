@@ -22,7 +22,7 @@ func newDigest(client network.Client) Communication {
 	}
 }
 
-// Get - get digest
+//Get - get digest
 func (d *digest) Get(args ...interface{}) (interface{}, error) {
 	if 1 < len(args) {
 		return nil, fault.InvalidArguments

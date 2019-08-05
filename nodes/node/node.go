@@ -11,7 +11,7 @@ import (
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/network"
 )
 
-// Node - node interface
+//Node - node interface
 type Node interface {
 	BroadcastReceiver() network.Client
 	CommandSenderAndReceiver() network.Client
@@ -44,7 +44,7 @@ const (
 	checkIntervalSecond              = 10 * time.Second
 )
 
-// NewNode - create new node
+//NewNode - create new node
 func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int) (intf Node, err error) {
 	log := logger.New(fmt.Sprintf("node-%d", idx))
 
@@ -98,27 +98,27 @@ func parseKeys(keys configuration.Keys, remotePublicKeyStr string) (*nodeKeys, e
 	}, nil
 }
 
-// BroadcastReceiverClient - get zmq broadcast receiver remote
+//BroadcastReceiverClient - get zmq broadcast receiver remote
 func (n *node) BroadcastReceiver() network.Client {
 	return n.client.BroadcastReceiver()
 }
 
-// CommandSenderAndReceiver - network remote of command sender and receiver
+//CommandSenderAndReceiver - network remote of command sender and receiver
 func (n *node) CommandSenderAndReceiver() network.Client {
 	return n.client.CommandSenderAndReceiver()
 }
 
-// CheckTimer - get sender timer
+//CheckTimer - get sender timer
 func (n *node) CheckTimer() *time.Timer {
 	return n.checkTimer
 }
 
-// Remote - return remote interface
+//Remote - return remote interface
 func (n *node) Client() Remote {
 	return n.client
 }
 
-// CloseConnection - close connection
+//CloseConnection - close connection
 func (n *node) CloseConnection() error {
 	if err := n.client.Close(); nil != err {
 		return err
@@ -126,17 +126,17 @@ func (n *node) CloseConnection() error {
 	return nil
 }
 
-// DropRate - drop rate
+//DropRate - drop rate
 func (n *node) DropRate() {
 	return
 }
 
-// Log - get logger
+//Log - get logger
 func (n *node) Log() *logger.L {
 	return n.log
 }
 
-// Monitor - start to monitor
+//Monitor - start to monitor
 func (n *node) Monitor(shutdownCh <-chan struct{}) {
 	go receiverLoop(n, shutdownCh, n.id)
 	n.checkTimer.Reset(checkIntervalSecond)
@@ -153,12 +153,12 @@ loop:
 	return
 }
 
-// StopMonitor - stop monitor
+//StopMonitor - stop monitor
 func (n *node) StopMonitor() {
 	return
 }
 
-// Verify - verify record data
+//Verify - verify record data
 func (n *node) Verify() {
 	return
 }

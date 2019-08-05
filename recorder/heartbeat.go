@@ -13,7 +13,7 @@ type heartbeat struct {
 	intervalSecond float64
 }
 
-// HeartbeatSummary - summary of heartbeat data
+//HeartbeatSummary - summary of heartbeat data
 type HeartbeatSummary struct {
 	Duration      time.Duration
 	ReceivedCount uint16
@@ -24,7 +24,7 @@ const (
 	recordSize = 90
 )
 
-// Add - add received heartbeat record
+//Add - add received heartbeat record
 func (h *heartbeat) Add(t time.Time, args ...interface{}) {
 	h.Lock()
 	defer h.Unlock()
@@ -33,7 +33,7 @@ func (h *heartbeat) Add(t time.Time, args ...interface{}) {
 	h.nextItemID = nextID(h.nextItemID)
 }
 
-// Summary -summarize heartbeat data
+//Summary -summarize heartbeat data
 func (h *heartbeat) Summary() interface{} {
 	h.Lock()
 	defer h.Unlock()
@@ -80,7 +80,7 @@ func (h *heartbeat) droprate(duration time.Duration, actualReceived uint16) floa
 	return (expectedCount - float64(actualReceived)) * 100 / expectedCount
 }
 
-// NewHeartbeat - new heartbeat
+//NewHeartbeat - new heartbeat
 func NewHeartbeat(intervalSecond float64) Recorder {
 	return &heartbeat{
 		intervalSecond: intervalSecond,

@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// Recorder - recorder interface
+//Recorder - recorder interface
 type Recorder interface {
 	Add(time.Time, ...interface{})
 	Summary() interface{}

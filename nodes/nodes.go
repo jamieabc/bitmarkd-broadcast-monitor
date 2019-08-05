@@ -8,7 +8,7 @@ import (
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/nodes/node"
 )
 
-// Nodes - nodes interface
+//Nodes - nodes interface
 type Nodes interface {
 	DropRate()
 	Monitor()
@@ -22,7 +22,7 @@ type nodes struct {
 	shutdown chan struct{}
 }
 
-// Initialise - initialise nodes
+//Initialise - initialise nodes
 func Initialise(configs []configuration.NodeConfig, keys configuration.Keys) (Nodes, error) {
 	var ns []node.Node
 	log := logger.New("nodes")
@@ -42,11 +42,11 @@ func Initialise(configs []configuration.NodeConfig, keys configuration.Keys) (No
 	}, nil
 }
 
-// DropRate - drop rate
+//DropRate - drop rate
 func (n *nodes) DropRate() {
 }
 
-// Monitor - start monitor
+//Monitor - start monitor
 func (n *nodes) Monitor() {
 	nodeShutdown := make(chan struct{})
 	n.log.Info("start monitor")
@@ -66,7 +66,7 @@ func (n *nodes) Monitor() {
 	}()
 }
 
-// StopMonitor - stop monitor
+//StopMonitor - stop monitor
 func (n *nodes) StopMonitor() {
 	n.log.Infof("stop monitor")
 	n.shutdown <- struct{}{}

@@ -12,7 +12,7 @@ type info struct {
 	prefix string
 }
 
-// InfoResponse - info response
+//InfoResponse - info response
 type InfoResponse struct {
 	Version string `json:"version"`
 	Chain   string `json:"chain"`
@@ -27,7 +27,7 @@ func newInfo(client network.Client) Communication {
 	}
 }
 
-// Get - get info
+//Get - get info
 func (i *info) Get(payload ...interface{}) (interface{}, error) {
 	err := i.client.Send(i.prefix)
 	if nil != err {

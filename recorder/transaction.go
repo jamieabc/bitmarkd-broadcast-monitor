@@ -23,7 +23,7 @@ const (
 	txArriveDelayTime = 1 * time.Minute
 )
 
-// this variable stores superset of all transactions
+//this variable stores superset of all transactions
 var globalData *transactions
 
 //Add - Add transactions
@@ -78,7 +78,7 @@ func newTransaction() *transactions {
 	}
 }
 
-// NewTransaction - new transaction
+//NewTransaction - new transaction
 func NewTransaction() Recorder {
 	return newTransaction()
 }

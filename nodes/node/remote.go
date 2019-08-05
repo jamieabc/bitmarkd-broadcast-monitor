@@ -10,7 +10,7 @@ import (
 	zmq "github.com/pebbe/zmq4"
 )
 
-// Remote - remote interface
+//Remote - remote interface
 type Remote interface {
 	BroadcastReceiver() network.Client
 	Close() error
@@ -91,12 +91,12 @@ func hostAndPort(host string, port string) string {
 	return fmt.Sprintf("%s:%s", host, port)
 }
 
-// BroadcastReceiver - zmq remote of broadcast receiver
+//BroadcastReceiver - zmq remote of broadcast receiver
 func (c *remote) BroadcastReceiver() network.Client {
 	return c.broadcastReceiver
 }
 
-// Close - close remote
+//Close - close remote
 func (c *remote) Close() error {
 	if err := c.closeBroadcastReceiver(); nil != err {
 		return err
@@ -125,12 +125,12 @@ func (c *remote) closeCommandSenderAndReceiver() error {
 	return nil
 }
 
-// CommandSenderAndReceiver - zmq remote of command sender and receiver
+//CommandSenderAndReceiver - zmq remote of command sender and receiver
 func (c *remote) CommandSenderAndReceiver() network.Client {
 	return c.commandSenderAndReceiver
 }
 
-// DigestOfHeight - digest of block height
+//DigestOfHeight - digest of block height
 func (c *remote) DigestOfHeight(height uint64) (*blockdigest.Digest, error) {
 	comm := communication.New(communication.ComDigest, c.commandSenderAndReceiver)
 	reply, err := comm.Get(height)
@@ -140,7 +140,7 @@ func (c *remote) DigestOfHeight(height uint64) (*blockdigest.Digest, error) {
 	return reply.(*blockdigest.Digest), nil
 }
 
-// Info - remote remote info
+//Info - remote remote info
 func (c *remote) Info() (*communication.InfoResponse, error) {
 	comm := communication.New(communication.ComInfo, c.commandSenderAndReceiver)
 	reply, err := comm.Get()
