@@ -4,19 +4,26 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/recorder"
 )
 
-var shutdownChan chan struct{}
+const (
+	txID1 = "txID-1"
+	txID2 = "txID-2"
+)
+
+var transactionShutdownChan chan struct{}
 
 func init() {
-	shutdownChan = make(chan struct{})
+	transactionShutdownChan = make(chan struct{})
 }
 
 func setupTransaction() {
-	recorder.Initialise(shutdownChan)
+	recorder.Initialise(transactionShutdownChan)
 }
 
 func TestSummaryWhenEmpty(t *testing.T) {
@@ -31,8 +38,7 @@ func TestSummaryWhenNoDrop(t *testing.T) {
 	setupTransaction()
 	r := recorder.NewTransaction()
 	now := time.Now()
-	txID := "this is test"
-	r.Add(now, txID)
+	r.Add(now, txID1)
 	summary := r.Summary().(*recorder.TransactionSummary)
 
 	assert.Equal(t, float64(0), summary.Droprate, "wrong droprate")
@@ -42,12 +48,10 @@ func TestSummaryWhenDropWithDistinct(t *testing.T) {
 	setupTransaction()
 	r1 := recorder.NewTransaction()
 	r2 := recorder.NewTransaction()
-	txID1 := "id1"
-	txID2 := "id2"
 	now1 := time.Now()
 	now2 := now1.Add(1 * time.Second)
-	recorder.AddTransaction(r1, now1, txID1)
-	recorder.AddTransaction(r2, now2, txID2)
+	r1.Add(now1, txID1)
+	r2.Add(now2, txID2)
 
 	summary1 := r1.Summary().(*recorder.TransactionSummary)
 	summary2 := r2.Summary().(*recorder.TransactionSummary)
@@ -60,14 +64,39 @@ func TestSummaryWhenDropWithSame(t *testing.T) {
 	setupTransaction()
 	r1 := recorder.NewTransaction()
 	r2 := recorder.NewTransaction()
-	txID := "id"
 	now := time.Now()
-	recorder.AddTransaction(r1, now, txID)
-	recorder.AddTransaction(r2, now, txID)
+	r1.Add(now, txID1)
+	r2.Add(now, txID1)
 
 	summary1 := r1.Summary().(*recorder.TransactionSummary)
 	summary2 := r2.Summary().(*recorder.TransactionSummary)
 
-	assert.Equal(t, float64(1), summary1.Droprate, "wrong droprate")
-	assert.Equal(t, float64(1), summary2.Droprate, "wrong droprate")
+	assert.Equal(t, float64(0), summary1.Droprate, "wrong droprate")
+	assert.Equal(t, float64(0), summary2.Droprate, "wrong droprate")
+}
+
+func TestTransactionCleanupPeriodically(t *testing.T) {
+	setupTransaction()
+	ctl, mock := setupTestClock(t)
+	defer ctl.Finish()
+
+	mock.EXPECT().After(gomock.Any()).Return(time.After(1)).Times(2)
+
+	now := time.Now()
+	r := recorder.NewTransaction()
+
+	txID1 := "txID-1"
+	txID2 := "txID-2"
+	r.Add(now.Add(-2*expiredTimeInterval), txID1)
+	r.Add(now, txID2)
+	summary := r.Summary().(*recorder.TransactionSummary)
+
+	assert.Equal(t, float64(0), summary.Droprate, "wrong droprate")
+
+	go r.CleanupPeriodically(mock)
+	<-time.After(10 * time.Millisecond)
+	transactionShutdownChan <- struct{}{}
+	summary = r.Summary().(*recorder.TransactionSummary)
+
+	assert.Equal(t, 0.5, summary.Droprate, "wrong droprate")
 }

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/clock"
 )
 
 type transactions struct {
@@ -22,13 +24,17 @@ const (
 )
 
 //this variable stores superset of all transactions
-var globalData *transactions
+var globalTransactions *transactions
 var shutdownChan <-chan struct{}
 
-//Add - Add transactions
+//Add - Add transaction
 func (t *transactions) Add(receivedTime time.Time, args ...interface{}) {
-	arg := args[0]
-	txID := fmt.Sprintf("%v", arg)
+	t.add(receivedTime, args)
+	globalTransactions.add(receivedTime, args)
+}
+
+func (t *transactions) add(receivedTime time.Time, args ...interface{}) {
+	txID := fmt.Sprintf("%v", args[0])
 	if t.isTxIDExist(txID) {
 		return
 	}
@@ -46,34 +52,46 @@ func (t *transactions) isTxIDExist(txID string) bool {
 	return ok
 }
 
-func (t *transactions) CleanupPeriodically() {
+//CleanupPeriodically - clean expired transaction periodically
+func (t *transactions) CleanupPeriodically(c clock.Clock) {
+	timer := c.After(expiredTimeInterval)
+loop:
+	for {
+		select {
+		case <-shutdownChan:
+			break loop
 
+		case <-timer:
+			cleanupExpiredTransaction(t)
+			timer = c.After(txArriveDelayTime)
+		}
+	}
+}
+
+func cleanupExpiredTransaction(t *transactions) {
+	now := time.Now()
+	t.Lock()
+	defer t.Unlock()
+	for k, v := range t.data {
+		if now.After(time.Time(v)) {
+			delete(t.data, k)
+		}
+	}
 }
 
 //Summary - summarize transactions info, mainly droprate
 func (t *transactions) Summary() interface{} {
-	globalCount := recordCount(globalData)
+	globalCount := len(globalTransactions.data)
 	if 0 == globalCount {
 		return &TransactionSummary{0}
 	}
-	dropRate := float64(recordCount(t)) / float64(globalCount)
+	dropRate := float64(globalCount-len(t.data)) / float64(globalCount)
 	return &TransactionSummary{dropRate}
 }
 
-func recordCount(t *transactions) int {
-	return len(t.data)
-}
-
-//AddTransaction - add transaction
-func AddTransaction(t Recorder, receivedTime time.Time, txID string) {
-	t.Add(receivedTime, txID)
-	globalData.Add(receivedTime, txID)
-}
-
-//Initialise
-func Initialise(shutdownCh <-chan struct{}) {
-	globalData = newTransaction()
-	shutdownChan = shutdownCh
+func initialiseTransactions(shutdown <-chan struct{}) {
+	globalTransactions = newTransaction()
+	shutdownChan = shutdown
 }
 
 func newTransaction() *transactions {
@@ -85,14 +103,4 @@ func newTransaction() *transactions {
 //NewTransaction - new transaction
 func NewTransaction() Recorder {
 	return newTransaction()
-}
-
-func periodRecycleTransaction() {
-	timer := time.After(expiredTimeInterval)
-	for {
-		select {
-		case <-timer:
-			timer = time.After(txArriveDelayTime)
-		}
-	}
 }

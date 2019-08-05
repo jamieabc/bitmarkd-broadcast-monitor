@@ -4,6 +4,8 @@ import (
 	"math"
 	"sync"
 	"time"
+
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/clock"
 )
 
 type heartbeat struct {
@@ -11,6 +13,7 @@ type heartbeat struct {
 	data           map[receivedAt]expiredAt
 	nextItemID     int
 	intervalSecond float64
+	shutdownChan   <-chan struct{}
 }
 
 //HeartbeatSummary - summary of heartbeat data
@@ -28,7 +31,31 @@ func (h *heartbeat) Add(t time.Time, args ...interface{}) {
 	h.data[receivedAt(t)] = expiredAt(t.Add(expiredTimeInterval))
 }
 
-func (h *heartbeat) CleanupPeriodically() {
+//CleanupPeriodically - clean expired heartbeat record periodically
+func (h *heartbeat) CleanupPeriodically(c clock.Clock) {
+	timer := c.After(expiredTimeInterval)
+loop:
+	for {
+		select {
+		case <-h.shutdownChan:
+			break loop
+		case <-timer:
+			cleanupExpiredHeartbeat(h)
+			timer = c.After(time.Duration(h.intervalSecond) * time.Second)
+		}
+	}
+}
+
+func cleanupExpiredHeartbeat(h *heartbeat) {
+	now := time.Now()
+	h.Lock()
+	defer h.Unlock()
+
+	for k, v := range h.data {
+		if now.After(time.Time(v)) {
+			delete(h.data, k)
+		}
+	}
 }
 
 //Summary - summarize heartbeat data
@@ -80,9 +107,13 @@ func (h *heartbeat) droprate(duration time.Duration, actualReceived uint16) floa
 }
 
 //NewHeartbeat - new heartbeat
-func NewHeartbeat(intervalSecond float64) Recorder {
-	return &heartbeat{
+func NewHeartbeat(intervalSecond float64, shutdownChan <-chan struct{}) Recorder {
+	h := &heartbeat{
 		data:           make(map[receivedAt]expiredAt),
 		intervalSecond: intervalSecond,
+		shutdownChan:   shutdownChan,
 	}
+	c := clock.NewClock()
+	go h.CleanupPeriodically(c)
+	return h
 }

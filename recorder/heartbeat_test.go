@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
+
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/recorder"
 
 	"github.com/stretchr/testify/assert"
@@ -13,8 +15,18 @@ const (
 	heartbeatInterval = 1
 )
 
+var heartbeatShutdownChan chan struct{}
+
+func init() {
+	heartbeatShutdownChan = make(chan struct{})
+}
+
+func setupHeartbeat() recorder.Recorder {
+	return recorder.NewHeartbeat(heartbeatInterval, heartbeatShutdownChan)
+}
+
 func TestNewHeartbeat(t *testing.T) {
-	r := recorder.NewHeartbeat(heartbeatInterval)
+	r := setupHeartbeat()
 
 	summary := r.Summary().(*recorder.HeartbeatSummary)
 
@@ -24,7 +36,7 @@ func TestNewHeartbeat(t *testing.T) {
 }
 
 func TestHeartbeatSummaryWhenSingle(t *testing.T) {
-	r := recorder.NewHeartbeat(heartbeatInterval)
+	r := setupHeartbeat()
 	now := time.Now()
 	r.Add(now)
 	summary := r.Summary().(*recorder.HeartbeatSummary)
@@ -35,7 +47,7 @@ func TestHeartbeatSummaryWhenSingle(t *testing.T) {
 }
 
 func TestHeartbeatSummaryWhenEdge(t *testing.T) {
-	r := recorder.NewHeartbeat(heartbeatInterval)
+	r := setupHeartbeat()
 	now := time.Now()
 	size := 40
 	for i := 0; i < size; i++ {
@@ -49,7 +61,7 @@ func TestHeartbeatSummaryWhenEdge(t *testing.T) {
 }
 
 func TestHeartbeatSummaryWhenCycle(t *testing.T) {
-	r := recorder.NewHeartbeat(heartbeatInterval)
+	r := setupHeartbeat()
 	now := time.Now()
 	size := 100
 	for i := 0; i < size; i++ {
@@ -63,7 +75,7 @@ func TestHeartbeatSummaryWhenCycle(t *testing.T) {
 }
 
 func TestHeartbeatSummaryWhenDrop(t *testing.T) {
-	r := recorder.NewHeartbeat(heartbeatInterval)
+	r := setupHeartbeat()
 	now := time.Now()
 	size := 20
 	for i := 0; i < size; i++ {
@@ -80,7 +92,7 @@ func TestHeartbeatSummaryWhenDrop(t *testing.T) {
 }
 
 func TestHeartbeatSummaryWhenEnough(t *testing.T) {
-	r := recorder.NewHeartbeat(heartbeatInterval)
+	r := setupHeartbeat()
 	now := time.Now()
 	size := 15
 	for i := 0; i < size; i++ {
@@ -91,4 +103,23 @@ func TestHeartbeatSummaryWhenEnough(t *testing.T) {
 	assert.Equal(t, time.Duration(14)*time.Second, summary.Duration, "wrong duration")
 	assert.Equal(t, uint16(15), summary.ReceivedCount, "wrong heartbeat count")
 	assert.Equal(t, float64(0), summary.Droprate, "wrong droprate")
+}
+
+func TestHeartbeatCleanupPeriodically(t *testing.T) {
+	ctl, mock := setupTestClock(t)
+	defer ctl.Finish()
+
+	mock.EXPECT().After(gomock.Any()).Return(time.After(1)).Times(2)
+
+	r := setupHeartbeat()
+	now := time.Now()
+	r.Add(now.Add(-1 * expiredTimeInterval))
+	summary := r.Summary().(*recorder.HeartbeatSummary)
+	assert.Equal(t, uint16(1), summary.ReceivedCount, "wrong count")
+
+	go r.CleanupPeriodically(mock)
+	<-time.After(10 * time.Millisecond)
+	heartbeatShutdownChan <- struct{}{}
+	summary = r.Summary().(*recorder.HeartbeatSummary)
+	assert.Equal(t, uint16(0), summary.ReceivedCount, "wrong count")
 }
