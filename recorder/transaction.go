@@ -24,7 +24,7 @@ const (
 )
 
 // this variable stores superset of all transactions
-var globalData transactions
+var globalData *transactions
 
 //Add - Add transactions
 func (t *transactions) Add(receivedTime time.Time, args ...interface{}) {
@@ -49,7 +49,7 @@ func (t *transactions) isTxIDExist(txID string) bool {
 
 //Summary - summarize transactions info, mainly droprate
 func (t *transactions) Summary() interface{} {
-	globalCount := recordCount(&globalData)
+	globalCount := recordCount(globalData)
 	if 0 == globalCount {
 		return &TransactionSummary{0}
 	}
@@ -61,7 +61,7 @@ func recordCount(t *transactions) int {
 	return len(t.data)
 }
 
-//AddTransaction - add transation
+//AddTransaction - add transaction
 func AddTransaction(t Recorder, receivedTime time.Time, txID string) {
 	t.Add(receivedTime, txID)
 	globalData.Add(receivedTime, txID)
@@ -69,14 +69,16 @@ func AddTransaction(t Recorder, receivedTime time.Time, txID string) {
 
 //Initialise
 func Initialise() {
-	globalData = transactions{
+	globalData = newTransaction()
+}
+
+func newTransaction() *transactions {
+	return &transactions{
 		data: make(map[string]expiredAt),
 	}
 }
 
 // NewTransaction - new transaction
 func NewTransaction() Recorder {
-	return &transactions{
-		data: make(map[string]expiredAt),
-	}
+	return newTransaction()
 }
