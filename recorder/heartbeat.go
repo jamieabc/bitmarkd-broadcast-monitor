@@ -1,6 +1,7 @@
 package recorder
 
 import (
+	"fmt"
 	"math"
 	"sync"
 	"time"
@@ -21,6 +22,10 @@ type HeartbeatSummary struct {
 	Duration      time.Duration
 	ReceivedCount uint16
 	Droprate      float64
+}
+
+func (h *HeartbeatSummary) String() string {
+	return fmt.Sprintf("duration: %s, received count: %d, drop rate: %f", h.Duration, h.ReceivedCount, h.Droprate)
 }
 
 //Add - add received heartbeat record

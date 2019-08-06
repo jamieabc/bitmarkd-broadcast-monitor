@@ -20,8 +20,8 @@ loop:
 		case <-shutdownCh:
 			break loop
 		case <-timer:
-			log.Infof("heartbeat summary: %+v", rs.heartbeat.Summary().(*recorder.HeartbeatSummary))
-			log.Infof("transaction summary: %+v", rs.transaction.Summary().(*recorder.TransactionSummary))
+			log.Infof("heartbeat summary: %s", rs.heartbeat.Summary().(*recorder.HeartbeatSummary))
+			log.Infof("transaction summary: %s", rs.transaction.Summary().(*recorder.TransactionSummary))
 			timer = time.After(checkInterval)
 		}
 	}

@@ -8,6 +8,14 @@ import (
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/clock"
 )
 
+const (
+	txArriveDelayTime = 1 * time.Minute
+)
+
+//this variable stores superset of all transactions
+var globalTransactions *transactions
+var shutdownChan <-chan struct{}
+
 type transactions struct {
 	sync.Mutex
 	data       map[string]expiredAt
@@ -19,13 +27,9 @@ type TransactionSummary struct {
 	Droprate float64
 }
 
-const (
-	txArriveDelayTime = 1 * time.Minute
-)
-
-//this variable stores superset of all transactions
-var globalTransactions *transactions
-var shutdownChan <-chan struct{}
+func (t *TransactionSummary) String() string {
+	return fmt.Sprintf("droprate: %f", t.Droprate)
+}
 
 //Add - Add transaction
 func (t *transactions) Add(receivedTime time.Time, args ...interface{}) {
