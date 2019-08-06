@@ -42,8 +42,6 @@ func receiverLoop(n Node, rs recorders, shutdownCh <-chan struct{}, id int, noti
 	go func() {
 		for {
 			_ = poller.Start(receiveBroadcastIntervalInSecond)
-			log.Debug("waiting broadcast...")
-
 			select {
 			case polled := <-eventChannel:
 				data, err := polled.Socket.RecvMessageBytes(0)
