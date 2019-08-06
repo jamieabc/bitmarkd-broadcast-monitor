@@ -16,10 +16,11 @@ import (
 )
 
 const (
-	assetCategoryStr    = "assets"
-	issueCategoryStr    = "issues"
-	transferCategoryStr = "transfer"
-	blockCategoryStr    = "block"
+	assetCmdStr     = "assets"
+	issueCmdStr     = "issues"
+	transferCmdStr  = "transfer"
+	blockCmdStr     = "block"
+	heartbeatCmdStr = "heart"
 )
 
 func receiverLoop(n Node, rs recorders, shutdownCh <-chan struct{}, id int) {
@@ -76,7 +77,7 @@ func process(n Node, rs recorders, data [][]byte) {
 	now := time.Now()
 
 	switch category := string(data[1]); category {
-	case blockCategoryStr:
+	case blockCmdStr:
 		header, digest, _, err := blockrecord.ExtractHeader(data[2])
 		if nil != err {
 			log.Errorf("extract block header with error: %s", err)
@@ -84,7 +85,7 @@ func process(n Node, rs recorders, data [][]byte) {
 		}
 		log.Infof("receive block, number: %d, digest: %s", header.Number, digest)
 
-	case assetCategoryStr, issueCategoryStr, transferCategoryStr:
+	case assetCmdStr, issueCmdStr, transferCmdStr:
 		trx := data[2]
 
 		txID, err := transactionID(trx, blockchain, log)
@@ -94,7 +95,7 @@ func process(n Node, rs recorders, data [][]byte) {
 		log.Infof("receive %s: transaction ID %s", category, txID)
 		rs.transaction.Add(now, txID)
 
-	case "heart":
+	case heartbeatCmdStr:
 		log.Infof("receive heartbeat")
 		rs.heartbeat.Add(now)
 
