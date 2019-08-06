@@ -27,6 +27,9 @@ type HeartbeatSummary struct {
 var expectedReceivedCount float64
 
 func (h *HeartbeatSummary) String() string {
+	if 0 == h.ReceivedCount {
+		return "not receive any heartbeat"
+	}
 	return fmt.Sprintf("duration: %s, received: %d, drop rate: %f", h.Duration, h.ReceivedCount, h.Droprate)
 }
 
