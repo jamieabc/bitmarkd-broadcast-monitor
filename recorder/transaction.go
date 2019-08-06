@@ -25,10 +25,11 @@ type transactions struct {
 //TransactionSummary - summary of received￿￿￿ transactions
 type TransactionSummary struct {
 	Droprate float64
+	Received int
 }
 
 func (t *TransactionSummary) String() string {
-	return fmt.Sprintf("droprate: %f", t.Droprate)
+	return fmt.Sprintf("received: %d, droprate: %f", t.Received, t.Droprate)
 }
 
 //Add - Add transaction
@@ -87,10 +88,10 @@ func cleanupExpiredTransaction(t *transactions) {
 func (t *transactions) Summary() interface{} {
 	globalCount := len(globalTransactions.data)
 	if 0 == globalCount {
-		return &TransactionSummary{0}
+		return &TransactionSummary{0, 0}
 	}
 	dropRate := float64(globalCount-len(t.data)) / float64(globalCount)
-	return &TransactionSummary{dropRate}
+	return &TransactionSummary{dropRate, len(t.data)}
 }
 
 func initialiseTransactions(shutdown <-chan struct{}) {

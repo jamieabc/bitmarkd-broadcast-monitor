@@ -25,7 +25,7 @@ type HeartbeatSummary struct {
 }
 
 func (h *HeartbeatSummary) String() string {
-	return fmt.Sprintf("duration: %s, received count: %d, drop rate: %f", h.Duration, h.ReceivedCount, h.Droprate)
+	return fmt.Sprintf("duration: %s, received: %d, drop rate: %f", h.Duration, h.ReceivedCount, h.Droprate)
 }
 
 //Add - add received heartbeat record
