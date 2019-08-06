@@ -17,6 +17,7 @@ loop:
 				log.Errorf("get remote info error: %s", err)
 				log.Infof("remote info: %v\n", info)
 			}
+			log.Infof("remote info: %s", info)
 			n.CheckTimer().Reset(checkIntervalSecond)
 		}
 	}

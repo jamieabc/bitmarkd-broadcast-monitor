@@ -140,7 +140,7 @@ func (c *remote) DigestOfHeight(height uint64) (*blockdigest.Digest, error) {
 	return reply.(*blockdigest.Digest), nil
 }
 
-//Info - remote remote info
+//Info - remote info
 func (c *remote) Info() (*communication.InfoResponse, error) {
 	comm := communication.New(communication.ComInfo, c.commandSenderAndReceiver)
 	reply, err := comm.Get()

@@ -20,6 +20,10 @@ type InfoResponse struct {
 	Height  uint64 `json:"height"`
 }
 
+func (i *InfoResponse) String() string {
+	return fmt.Sprintf("version %s, chain %s, height %d, normal %t", i.Version, i.Chain, i.Height, i.Normal)
+}
+
 func newInfo(client network.Client) Communication {
 	return &info{
 		client: client,
@@ -48,7 +52,6 @@ func (i *info) Get(payload ...interface{}) (interface{}, error) {
 	if nil != err {
 		return nil, err
 	}
-	fmt.Printf("info: %+v\n", info)
 
 	return &info, nil
 }

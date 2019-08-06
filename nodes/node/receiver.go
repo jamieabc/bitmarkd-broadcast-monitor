@@ -1,7 +1,10 @@
 package node
 
 import (
+	"fmt"
 	"time"
+
+	"github.com/bitmark-inc/bitmarkd/blockrecord"
 
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/merkle"
@@ -16,6 +19,7 @@ const (
 	assetCategoryStr    = "assets"
 	issueCategoryStr    = "issues"
 	transferCategoryStr = "transfer"
+	blockCategoryStr    = "block"
 )
 
 func receiverLoop(n Node, rs recorders, shutdownCh <-chan struct{}, id int) {
@@ -72,17 +76,22 @@ func process(n Node, rs recorders, data [][]byte) {
 	now := time.Now()
 
 	switch category := string(data[1]); category {
+	case blockCategoryStr:
+		header, digest, _, err := blockrecord.ExtractHeader(data[2])
+		if nil != err {
+			log.Errorf("extract block header with error: %s", err)
+			return
+		}
+		log.Infof("receive block, number: %d, digest: %s", header.Number, digest)
+
 	case assetCategoryStr, issueCategoryStr, transferCategoryStr:
 		trx := data[2]
-
-		log.Infof("receive %s record", category)
-		log.Debugf("transactions: %x", trx)
 
 		txID, err := transactionID(trx, blockchain, log)
 		if nil != err {
 			return
 		}
-		log.Infof("transaction ID: %s", txID)
+		log.Infof("receive %s: transaction ID %s", category, txID)
 		rs.transaction.Add(now, txID)
 
 	case "heart":
@@ -105,5 +114,6 @@ func transactionID(trx []byte, chain string, log *logger.L) (merkle.Digest, erro
 }
 
 func isTestnet(category string) bool {
+	fmt.Printf("category: %s", category)
 	return chain.Bitmark != category
 }
