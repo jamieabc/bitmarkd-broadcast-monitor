@@ -31,7 +31,7 @@ func (h *HeartbeatSummary) String() string {
 		return "not receive any heartbeat yet"
 	}
 	dropPercent := math.Floor(h.Droprate*10000) / 100
-	return fmt.Sprintf("earliest received to now takes %s, received: %d, drop percent: %f%", h.Duration, h.ReceivedCount, dropPercent)
+	return fmt.Sprintf("earliest received to now takes %s, received: %d, drop percent: %f%%", h.Duration, h.ReceivedCount, dropPercent)
 }
 
 //Add - add received heartbeat record

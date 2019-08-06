@@ -22,11 +22,11 @@ const (
 	heartbeatCmdStr = "heart"
 )
 
-func receiverLoop(n Node, rs recorders, shutdownCh <-chan struct{}, id int, notifyChan chan struct{}) {
+func receiverLoop(n Node, rs recorders, id int) {
 	eventChannel := make(chan zmq.Polled, 10)
 	log := n.Log()
 
-	poller, err := network.NewPoller(eventChannel, shutdownCh, id)
+	poller, err := network.NewPoller(eventChannel, shutdownChan, id)
 	if nil != err {
 		log.Errorf("create poller with error: %s", err)
 		return
@@ -49,8 +49,8 @@ func receiverLoop(n Node, rs recorders, shutdownCh <-chan struct{}, id int, noti
 					log.Errorf("receive error: %s", err)
 					continue
 				}
-				process(n, rs, data, &checked, notifyChan)
-			case <-shutdownCh:
+				process(n, rs, data, &checked)
+			case <-shutdownChan:
 				return
 			case <-checkTimer:
 				checked = false
@@ -59,7 +59,7 @@ func receiverLoop(n Node, rs recorders, shutdownCh <-chan struct{}, id int, noti
 		}
 	}()
 
-	<-shutdownCh
+	<-shutdownChan
 
 	if err := n.CloseConnection(); nil != err {
 		log.Errorf("close connection with error: %s", err)
@@ -69,7 +69,7 @@ func receiverLoop(n Node, rs recorders, shutdownCh <-chan struct{}, id int, noti
 	return
 }
 
-func process(n Node, rs recorders, data [][]byte, checked *bool, notifyChan chan struct{}) {
+func process(n Node, rs recorders, data [][]byte, checked *bool) {
 	log := n.Log()
 	blockchain := string(data[0])
 	if !chain.Valid(blockchain) {

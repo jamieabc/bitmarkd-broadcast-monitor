@@ -10,14 +10,14 @@ const (
 	checkInterval = 1 * time.Minute
 )
 
-func checkerLoop(n Node, rs recorders, shutdownCh <-chan struct{}) {
+func checkerLoop(n Node, rs recorders) {
 	log := n.Log()
 	timer := time.After(checkInterval)
 
 loop:
 	for {
 		select {
-		case <-shutdownCh:
+		case <-shutdownChan:
 			break loop
 		case <-timer:
 			log.Infof("heartbeat summary: %s", rs.heartbeat.Summary().(*recorder.HeartbeatSummary))

@@ -55,11 +55,13 @@ const (
 
 var (
 	shutdownChan <-chan struct{}
+	notifyChan   chan struct{}
 )
 
 //Initialise
 func Initialise(shutdown <-chan struct{}) {
 	shutdownChan = shutdown
+	notifyChan = make(chan struct{}, 1)
 	recorder.Initialise(shutdown)
 }
 
@@ -163,12 +165,11 @@ func (n *node) Monitor() {
 		heartbeat:   n.heartbeatRecorder,
 		transaction: n.transactionRecorder,
 	}
-	notifyChan := make(chan struct{}, 1)
-	go receiverLoop(n, rs, shutdownChan, n.id, notifyChan)
-	go checkerLoop(n, rs, shutdownChan)
+	go receiverLoop(n, rs, n.id)
+	go checkerLoop(n, rs)
 
 	n.checkTimer.Reset(checkIntervalSecond)
-	go senderLoop(n, shutdownChan, notifyChan)
+	go senderLoop(n)
 
 loop:
 	select {

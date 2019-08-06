@@ -5,13 +5,13 @@ import (
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/communication"
 )
 
-func senderLoop(n Node, shutdown <-chan struct{}, notifyChan chan struct{}) {
+func senderLoop(n Node) {
 	log := n.Log()
 loop:
 	for {
 		select {
-		case <-shutdown:
-			log.Infof("receive shutdown signal")
+		case <-shutdownChan:
+			log.Infof("receive shutdownChan signal")
 			break loop
 		case <-notifyChan:
 			digest, height, err := remoteDigestOfHeight(n)
