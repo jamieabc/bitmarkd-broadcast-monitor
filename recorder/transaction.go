@@ -33,7 +33,7 @@ func (t *TransactionSummary) String() string {
 	if 0 == t.Received {
 		return "not receive any transaction yet"
 	}
-	dropPercent := math.Floor(t.Droprate*100) / 100
+	dropPercent := math.Floor(t.Droprate*10000) / 100
 	return fmt.Sprintf("earliest received to now got %d transactions, drop percent: %f%", t.Received, dropPercent)
 }
 
