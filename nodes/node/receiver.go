@@ -1,7 +1,6 @@
 package node
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
@@ -23,7 +22,7 @@ const (
 	heartbeatCmdStr = "heart"
 )
 
-func receiverLoop(n Node, rs recorders, shutdownCh <-chan struct{}, id int) {
+func receiverLoop(n Node, rs recorders, shutdownCh <-chan struct{}, id int, notifyChan chan struct{}) {
 	eventChannel := make(chan zmq.Polled, 10)
 	log := n.Log()
 
@@ -34,6 +33,8 @@ func receiverLoop(n Node, rs recorders, shutdownCh <-chan struct{}, id int) {
 	}
 	poller.Add(n.BroadcastReceiver(), zmq.POLLIN)
 	timer := clock.NewClock()
+	checkTimer := time.After(30 * time.Second)
+	checked := false
 
 	go rs.heartbeat.CleanupPeriodically(timer)
 	go rs.transaction.CleanupPeriodically(timer)
@@ -50,9 +51,12 @@ func receiverLoop(n Node, rs recorders, shutdownCh <-chan struct{}, id int) {
 					log.Errorf("receive error: %s", err)
 					continue
 				}
-				process(n, rs, data)
+				process(n, rs, data, &checked, notifyChan)
 			case <-shutdownCh:
 				return
+			case <-checkTimer:
+				checked = false
+				checkTimer = time.After(30 * time.Second)
 			}
 		}
 	}()
@@ -67,7 +71,7 @@ func receiverLoop(n Node, rs recorders, shutdownCh <-chan struct{}, id int) {
 	return
 }
 
-func process(n Node, rs recorders, data [][]byte) {
+func process(n Node, rs recorders, data [][]byte, checked *bool, notifyChan chan struct{}) {
 	log := n.Log()
 	blockchain := string(data[0])
 	if !chain.Valid(blockchain) {
@@ -94,6 +98,10 @@ func process(n Node, rs recorders, data [][]byte) {
 		}
 		log.Infof("receive %s: transaction ID %s", category, txID)
 		rs.transaction.Add(now, txID)
+		if !*checked {
+			*checked = true
+			notifyChan <- struct{}{}
+		}
 
 	case heartbeatCmdStr:
 		log.Infof("receive heartbeat")
@@ -115,6 +123,5 @@ func transactionID(trx []byte, chain string, log *logger.L) (merkle.Digest, erro
 }
 
 func isTestnet(category string) bool {
-	fmt.Printf("category: %s", category)
 	return chain.Bitmark != category
 }

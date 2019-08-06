@@ -3,7 +3,6 @@ package node
 import (
 	"fmt"
 
-	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/communication"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/configuration"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/network"
@@ -15,7 +14,7 @@ type Remote interface {
 	BroadcastReceiver() network.Client
 	Close() error
 	CommandSenderAndReceiver() network.Client
-	DigestOfHeight(height uint64) (*blockdigest.Digest, error)
+	DigestOfHeight(height uint64) (*communication.DigestResponse, error)
 	Info() (*communication.InfoResponse, error)
 }
 
@@ -131,13 +130,13 @@ func (c *remote) CommandSenderAndReceiver() network.Client {
 }
 
 //DigestOfHeight - digest of block height
-func (c *remote) DigestOfHeight(height uint64) (*blockdigest.Digest, error) {
+func (c *remote) DigestOfHeight(height uint64) (*communication.DigestResponse, error) {
 	comm := communication.New(communication.ComDigest, c.commandSenderAndReceiver)
 	reply, err := comm.Get(height)
 	if nil != err {
 		return nil, err
 	}
-	return reply.(*blockdigest.Digest), nil
+	return reply.(*communication.DigestResponse), nil
 }
 
 //Info - remote info

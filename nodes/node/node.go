@@ -163,11 +163,12 @@ func (n *node) Monitor() {
 		heartbeat:   n.heartbeatRecorder,
 		transaction: n.transactionRecorder,
 	}
-	go receiverLoop(n, rs, shutdownChan, n.id)
+	notifyChan := make(chan struct{}, 1)
+	go receiverLoop(n, rs, shutdownChan, n.id, notifyChan)
 	go checkerLoop(n, rs, shutdownChan)
 
 	n.checkTimer.Reset(checkIntervalSecond)
-	go senderLoop(n, shutdownChan)
+	go senderLoop(n, shutdownChan, notifyChan)
 
 loop:
 	select {

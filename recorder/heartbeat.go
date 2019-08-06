@@ -24,6 +24,8 @@ type HeartbeatSummary struct {
 	Droprate      float64
 }
 
+var expectedReceivedCount float64
+
 func (h *HeartbeatSummary) String() string {
 	return fmt.Sprintf("duration: %s, received: %d, drop rate: %f", h.Duration, h.ReceivedCount, h.Droprate)
 }
@@ -77,38 +79,33 @@ func (h *heartbeat) Summary() interface{} {
 		}
 	}
 
-	earliest, latest := findEarliestAndLatest(h.data)
-	duration := time.Time(latest).Sub(time.Time(earliest))
+	now := time.Now()
+	earliest := findEarliest(h.data)
+	duration := now.Sub(earliest)
 
 	return &HeartbeatSummary{
 		Duration:      duration,
-		ReceivedCount: uint16(len(h.data)),
-		Droprate:      h.droprate(duration, count),
+		ReceivedCount: count,
+		Droprate:      h.droprate(count),
 	}
 }
 
-func findEarliestAndLatest(data map[receivedAt]expiredAt) (expiredAt, expiredAt) {
-	earliest := expiredAt(time.Time{})
-	latest := expiredAt(time.Time{})
-	for _, v := range data {
-		if expiredAt(time.Time{}) == earliest || time.Time(earliest).After(time.Time(v)) {
-			earliest = v
-		}
-
-		if expiredAt(time.Time{}) == latest || time.Time(latest).Before(time.Time(v)) {
-			latest = v
+func findEarliest(data map[receivedAt]expiredAt) time.Time {
+	earliest := time.Time{}
+	for k := range data {
+		if (time.Time{}) == earliest || earliest.After(time.Time(k)) {
+			earliest = time.Time(k)
 		}
 	}
-	return earliest, latest
+	return earliest
 }
 
-func (h *heartbeat) droprate(duration time.Duration, actualReceived uint16) float64 {
-	expectedCount := math.Floor(duration.Seconds()/h.intervalSecond) + 1
-	if 0 == expectedCount || expectedCount == float64(actualReceived) {
+func (h *heartbeat) droprate(actualReceived uint16) float64 {
+	if 0 == expectedReceivedCount || expectedReceivedCount == float64(actualReceived) {
 		return float64(0)
 	}
 
-	result := (expectedCount - float64(actualReceived)) / expectedCount
+	result := (expectedReceivedCount - float64(actualReceived)) / expectedReceivedCount
 	return result
 }
 
@@ -119,6 +116,7 @@ func NewHeartbeat(intervalSecond float64, shutdownChan <-chan struct{}) Recorder
 		intervalSecond: intervalSecond,
 		shutdownChan:   shutdownChan,
 	}
+	expectedReceivedCount = math.Floor(expiredTimeInterval.Seconds() / intervalSecond)
 	c := clock.NewClock()
 	go h.CleanupPeriodically(c)
 	return h

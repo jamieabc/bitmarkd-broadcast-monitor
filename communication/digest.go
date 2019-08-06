@@ -15,6 +15,11 @@ type digest struct {
 	prefix string
 }
 
+//DigestResponse - digest response
+type DigestResponse struct {
+	Digest blockdigest.Digest
+}
+
 func newDigest(client network.Client) Communication {
 	return &digest{
 		client: client,
@@ -51,7 +56,9 @@ func (d *digest) Get(args ...interface{}) (interface{}, error) {
 	}
 	fmt.Printf("digest: %s\n", digest.String())
 
-	return &digest, nil
+	return &DigestResponse{
+		Digest: digest,
+	}, nil
 }
 
 func genPayload(height uint64) []byte {
