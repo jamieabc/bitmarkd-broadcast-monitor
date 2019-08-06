@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/recorder"
+
 	"github.com/bitmark-inc/logger"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/configuration"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/network"
@@ -25,12 +27,19 @@ type Node interface {
 	Verify()
 }
 
+type recorders struct {
+	heartbeat   recorder.Recorder
+	transaction recorder.Recorder
+}
+
 type node struct {
-	config     configuration.NodeConfig
-	client     Remote
-	id         int
-	log        *logger.L
-	checkTimer *time.Timer
+	checkTimer          *time.Timer
+	client              Remote
+	config              configuration.NodeConfig
+	heartbeatRecorder   recorder.Recorder
+	id                  int
+	log                 *logger.L
+	transactionRecorder recorder.Recorder
 }
 
 type nodeKeys struct {
@@ -51,17 +60,20 @@ var (
 //Initialise
 func Initialise(shutdown <-chan struct{}) {
 	shutdownChan = shutdown
+	recorder.Initialise(shutdown)
 }
 
 //NewNode - create new node
-func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int) (intf Node, err error) {
+func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int, heartbeatIntervalSecond int) (intf Node, err error) {
 	log := logger.New(fmt.Sprintf("node-%d", idx))
 
 	n := &node{
-		config:     config,
-		id:         idx,
-		log:        log,
-		checkTimer: time.NewTimer(checkIntervalSecond),
+		checkTimer:          time.NewTimer(checkIntervalSecond),
+		config:              config,
+		heartbeatRecorder:   recorder.NewHeartbeat(float64(heartbeatIntervalSecond), shutdownChan),
+		id:                  idx,
+		log:                 log,
+		transactionRecorder: recorder.NewTransaction(),
 	}
 
 	nodeKey, err := parseKeys(keys, config.PublicKey)
@@ -147,10 +159,15 @@ func (n *node) Log() *logger.L {
 
 //Monitor - start to monitor
 func (n *node) Monitor() {
-	go receiverLoop(n, shutdownChan, n.id)
+	rs := recorders{
+		heartbeat:   n.heartbeatRecorder,
+		transaction: n.transactionRecorder,
+	}
+	go receiverLoop(n, rs, shutdownChan, n.id)
+	go checkerLoop(n, rs, shutdownChan)
 
 	n.checkTimer.Reset(checkIntervalSecond)
-	go checkerLoop(n, shutdownChan)
+	go senderLoop(n, shutdownChan)
 
 loop:
 	select {

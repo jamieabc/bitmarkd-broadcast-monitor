@@ -108,7 +108,7 @@ func zmqAuth() error {
 }
 
 func initializeNodes(config configuration.Configuration) (nodes.Nodes, error) {
-	node, err := nodes.Initialise(config.NodesConfig(), config.Key())
+	node, err := nodes.Initialise(config.NodesConfig(), config.Key(), config.HeartbeatIntervalInSecond())
 	if nil != err {
 		return nil, err
 	}

@@ -2,7 +2,7 @@ package node
 
 import "github.com/jamieabc/bitmarkd-broadcast-monitor/communication"
 
-func checkerLoop(n Node, shutdown <-chan struct{}) {
+func senderLoop(n Node, shutdown <-chan struct{}) {
 	log := n.Log()
 loop:
 	for {
