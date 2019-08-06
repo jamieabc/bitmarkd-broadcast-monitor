@@ -28,9 +28,10 @@ var expectedReceivedCount float64
 
 func (h *HeartbeatSummary) String() string {
 	if 0 == h.ReceivedCount {
-		return "not receive any heartbeat"
+		return "not receive any heartbeat yet"
 	}
-	return fmt.Sprintf("duration: %s, received: %d, drop rate: %f", h.Duration, h.ReceivedCount, h.Droprate)
+	dropPercent := math.Floor(h.Droprate*100) / 100
+	return fmt.Sprintf("duration: %s, received: %d, drop percent: %f%", h.Duration, h.ReceivedCount, dropPercent)
 }
 
 //Add - add received heartbeat record

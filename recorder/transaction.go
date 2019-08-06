@@ -2,6 +2,7 @@ package recorder
 
 import (
 	"fmt"
+	"math"
 	"sync"
 	"time"
 
@@ -29,7 +30,11 @@ type TransactionSummary struct {
 }
 
 func (t *TransactionSummary) String() string {
-	return fmt.Sprintf("received: %d, droprate: %f", t.Received, t.Droprate)
+	if 0 == t.Received {
+		return "not receive any transaction yet"
+	}
+	dropPercent := math.Floor(t.Droprate*100) / 100
+	return fmt.Sprintf("received: %d, drop percent: %f%", t.Received, dropPercent)
 }
 
 //Add - Add transaction
