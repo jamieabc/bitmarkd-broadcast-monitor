@@ -13,9 +13,9 @@ import (
 )
 
 const (
-	assetCategoryStr    = "assetCategoryStr"
-	issueCategoryStr    = "issueCategoryStr"
-	transferCategoryStr = "transferCategoryStr"
+	assetCategoryStr    = "assets"
+	issueCategoryStr    = "issues"
+	transferCategoryStr = "transfer"
 )
 
 func receiverLoop(n Node, rs recorders, shutdownCh <-chan struct{}, id int) {
