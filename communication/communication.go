@@ -16,6 +16,9 @@ const (
 
 	//ComDigest - communication for digest
 	ComDigest
+
+	//ComHeight - communication for height
+	ComHeight
 )
 
 //New - new communication
@@ -25,6 +28,8 @@ func New(comType ComType, client network.Client) Communication {
 		return newInfo(client)
 	case ComDigest:
 		return newDigest(client)
+	case ComHeight:
+		return newHeight(client)
 	}
 	return nil
 }

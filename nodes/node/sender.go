@@ -14,7 +14,12 @@ loop:
 			log.Infof("terminate sender loop")
 			break loop
 		case <-notifyChan:
-			digest, height, err := remoteDigestOfHeight(n)
+			height, err := remoteHeight(n)
+			if nil != err {
+				log.Errorf("get remote height with error: %s", err)
+				continue
+			}
+			digest, err := remoteDigestOfHeight(n, height)
 			if nil != err {
 				log.Errorf("get remote digest of height with error: %s", err)
 				continue
@@ -24,10 +29,15 @@ loop:
 			info, err := remoteInfo(n)
 			if nil != err {
 				log.Errorf("get remote info error: %s", err)
-				log.Infof("remote info: %v\n", info)
 				continue
 			}
 			log.Infof("remote info: %s", info)
+			digest, err := remoteDigestOfHeight(n, info.Height)
+			if nil != err {
+				log.Errorf("remote height %d digest with error: %s", info.Height, err)
+				continue
+			}
+			log.Infof("remote height %d digest %s", info.Height, digest)
 			n.CheckTimer().Reset(checkIntervalSecond)
 		}
 	}
@@ -41,15 +51,18 @@ func remoteInfo(n Node) (*communication.InfoResponse, error) {
 	return info, nil
 }
 
-func remoteDigestOfHeight(n Node) (blockdigest.Digest, uint64, error) {
-	info, err := n.Client().Info()
+func remoteHeight(n Node) (uint64, error) {
+	height, err := n.Client().Height()
 	if nil != err {
-		return blockdigest.Digest{}, uint64(0), err
+		return uint64(0), err
 	}
-	height := info.Height
+	return height.Height, nil
+}
+
+func remoteDigestOfHeight(n Node, height uint64) (blockdigest.Digest, error) {
 	digest, err := n.Client().DigestOfHeight(height)
 	if nil != err {
-		return blockdigest.Digest{}, uint64(0), err
+		return blockdigest.Digest{}, err
 	}
-	return digest.Digest, height, nil
+	return digest.Digest, nil
 }

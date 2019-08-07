@@ -23,7 +23,7 @@ type DigestResponse struct {
 func newDigest(client network.Client) Communication {
 	return &digest{
 		client: client,
-		prefix: "I",
+		prefix: "H",
 	}
 }
 
@@ -54,7 +54,6 @@ func (d *digest) Get(args ...interface{}) (interface{}, error) {
 	if nil != err {
 		return nil, err
 	}
-	fmt.Printf("digest: %s\n", digest.String())
 
 	return &DigestResponse{
 		Digest: digest,

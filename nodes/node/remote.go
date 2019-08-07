@@ -16,6 +16,7 @@ type Remote interface {
 	CommandSenderAndReceiver() network.Client
 	DigestOfHeight(height uint64) (*communication.DigestResponse, error)
 	Info() (*communication.InfoResponse, error)
+	Height() (*communication.HeightResponse, error)
 }
 
 type remote struct {
@@ -91,33 +92,33 @@ func hostAndPort(host string, port string) string {
 }
 
 //BroadcastReceiver - zmq remote of broadcast receiver
-func (c *remote) BroadcastReceiver() network.Client {
-	return c.broadcastReceiver
+func (r *remote) BroadcastReceiver() network.Client {
+	return r.broadcastReceiver
 }
 
 //Close - close remote
-func (c *remote) Close() error {
-	if err := c.closeBroadcastReceiver(); nil != err {
+func (r *remote) Close() error {
+	if err := r.closeBroadcastReceiver(); nil != err {
 		return err
 	}
-	if err := c.closeCommandSenderAndReceiver(); nil != err {
+	if err := r.closeCommandSenderAndReceiver(); nil != err {
 		return err
 	}
 	return nil
 }
 
-func (c *remote) closeBroadcastReceiver() error {
-	if nil != c.broadcastReceiver {
-		if err := c.broadcastReceiver.Close(); nil != err {
+func (r *remote) closeBroadcastReceiver() error {
+	if nil != r.broadcastReceiver {
+		if err := r.broadcastReceiver.Close(); nil != err {
 			return err
 		}
 	}
 	return nil
 }
 
-func (c *remote) closeCommandSenderAndReceiver() error {
-	if nil != c.commandSenderAndReceiver {
-		if err := c.commandSenderAndReceiver.Close(); nil != err {
+func (r *remote) closeCommandSenderAndReceiver() error {
+	if nil != r.commandSenderAndReceiver {
+		if err := r.commandSenderAndReceiver.Close(); nil != err {
 			return err
 		}
 	}
@@ -125,13 +126,13 @@ func (c *remote) closeCommandSenderAndReceiver() error {
 }
 
 //CommandSenderAndReceiver - zmq remote of command sender and receiver
-func (c *remote) CommandSenderAndReceiver() network.Client {
-	return c.commandSenderAndReceiver
+func (r *remote) CommandSenderAndReceiver() network.Client {
+	return r.commandSenderAndReceiver
 }
 
 //DigestOfHeight - digest of block height
-func (c *remote) DigestOfHeight(height uint64) (*communication.DigestResponse, error) {
-	comm := communication.New(communication.ComDigest, c.commandSenderAndReceiver)
+func (r *remote) DigestOfHeight(height uint64) (*communication.DigestResponse, error) {
+	comm := communication.New(communication.ComDigest, r.commandSenderAndReceiver)
 	reply, err := comm.Get(height)
 	if nil != err {
 		return nil, err
@@ -140,12 +141,22 @@ func (c *remote) DigestOfHeight(height uint64) (*communication.DigestResponse, e
 }
 
 //Info - remote info
-func (c *remote) Info() (*communication.InfoResponse, error) {
-	comm := communication.New(communication.ComInfo, c.commandSenderAndReceiver)
+func (r *remote) Info() (*communication.InfoResponse, error) {
+	comm := communication.New(communication.ComInfo, r.commandSenderAndReceiver)
 	reply, err := comm.Get()
 	if nil != err {
 		return nil, err
 	}
 
 	return reply.(*communication.InfoResponse), nil
+}
+
+//Height - remote height
+func (r *remote) Height() (*communication.HeightResponse, error) {
+	comm := communication.New(communication.ComHeight, r.commandSenderAndReceiver)
+	reply, err := comm.Get()
+	if nil != err {
+		return nil, err
+	}
+	return reply.(*communication.HeightResponse), nil
 }
