@@ -6,12 +6,14 @@ M.nodes = {
     broadcast_port = "2135",
     command_port = "2136",
     public_key = "abcdef",
+    name = "name1",
   },
   {
     address_ipv4 = "127.0.0.1:5678",
     broadcast_port = "2135",
     command_port = "2136",
     public_key = "wxyz",
+    name = "name2",
   },
 }
 

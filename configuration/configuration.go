@@ -12,9 +12,9 @@ import (
 type Configuration interface {
 	Data() *configuration
 	HeartbeatIntervalInSecond() int
+	Key() Keys
 	LogConfig() logger.Configuration
 	NodesConfig() []NodeConfig
-	Key() Keys
 	String() string
 }
 
@@ -31,6 +31,7 @@ type NodeConfig struct {
 	BroadcastPort string `gluamapper:"broadcast_port"`
 	CommandPort   string `gluamapper:"command_port"`
 	Chain         string `gluamapper:"chain"`
+	Name          string `gluamapper:"name"`
 	PublicKey     string `gluamapper:"public_key"`
 }
 
@@ -98,13 +99,14 @@ func (c *configuration) String() string {
 	str.WriteString("nodes:\n")
 	for i, node := range c.Nodes {
 		str.WriteString(fmt.Sprintf(
-			"\tnode[%d]:\n\t\taddress: \t%s\n\t\tbroadcast port: %s\n\t\tcommand port: \t%s\n\t\tpublic key: \t%s\n\t\tchain: %s\n",
+			"\tnode[%d]:\n\t\taddress: \t%s\n\t\tbroadcast port: %s\n\t\tcommand port: \t%s\n\t\tpublic key: \t%s\n\t\tchain: %s\n\t\tname: %s\n",
 			i,
 			node.AddressIPv4,
 			node.BroadcastPort,
 			node.CommandPort,
 			node.PublicKey,
 			node.Chain,
+			node.Name,
 		))
 	}
 	str.WriteString(fmt.Sprintf("heartbeat interval: %d seconds\n", c.HeartbeatIntervalSecond))

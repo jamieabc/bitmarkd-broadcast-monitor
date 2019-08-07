@@ -25,6 +25,7 @@ M.nodes = {
     command_port = "4321",
     public_key = "abcdef",
     chain = "bitmark",
+    name = "name1",
   },
   {
     address_ipv4 = "127.0.0.1",
@@ -32,6 +33,7 @@ M.nodes = {
     command_port = "8765",
     public_key = "wxyz",
     chain = "testing",
+    name = "name2",
   },
 }
 
@@ -81,6 +83,7 @@ func TestParse(t *testing.T) {
 		CommandPort:   "4321",
 		PublicKey:     "abcdef",
 		Chain:         "bitmark",
+		Name:          "name1",
 	}
 
 	node2 := configuration.NodeConfig{
@@ -89,6 +92,7 @@ func TestParse(t *testing.T) {
 		CommandPort:   "8765",
 		PublicKey:     "wxyz",
 		Chain:         "testing",
+		Name:          "name2",
 	}
 
 	keys := configuration.Keys{
@@ -122,6 +126,7 @@ func TestString(t *testing.T) {
 	assert.Contains(t, actual, "wxyz", "wrong node 2 public key")
 	assert.Contains(t, actual, "testing", "wrong node 2 chain")
 	assert.Contains(t, actual, "60", "wrong heartbeat interval")
+	assert.Contains(t, actual, "name1", "wrong name")
 }
 
 func TestLogging(t *testing.T) {
@@ -155,6 +160,7 @@ func TestNodesConfig(t *testing.T) {
 		CommandPort:   "4321",
 		PublicKey:     "abcdef",
 		Chain:         "bitmark",
+		Name:          "name1",
 	}
 
 	node2 := configuration.NodeConfig{
@@ -163,6 +169,7 @@ func TestNodesConfig(t *testing.T) {
 		CommandPort:   "8765",
 		PublicKey:     "wxyz",
 		Chain:         "testing",
+		Name:          "name2",
 	}
 
 	config, _ := configuration.Parse(testFile)

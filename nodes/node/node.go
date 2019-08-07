@@ -66,7 +66,7 @@ func Initialise(shutdown <-chan struct{}) {
 
 //NewNode - create new node
 func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int, heartbeatIntervalSecond int) (intf Node, err error) {
-	log := logger.New(fmt.Sprintf("node-%d", idx))
+	log := logger.New(config.Name)
 
 	n := &node{
 		checkTimer:          time.NewTimer(checkIntervalSecond),
