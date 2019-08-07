@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bitmark-inc/logger"
+
 	zmq "github.com/pebbe/zmq4"
 )
 
@@ -99,6 +101,7 @@ loop:
 	for _, zmqEvent := range polled {
 		switch zmqEvent.Socket {
 		case p.signalPair.Receiver():
+			logger.Critical("receive internal signal pair, terminate")
 			break loop
 		default:
 			p.eventChan <- zmqEvent
