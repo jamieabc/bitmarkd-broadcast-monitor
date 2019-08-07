@@ -31,7 +31,7 @@ var (
 func (h *HeartbeatSummary) String() string {
 	if 0 == h.ReceivedCount {
 		expectedCount := math.Floor(h.Duration.Seconds() / intervalSecond)
-		return fmt.Sprintf("not receiving heartbeat for %s, expected received %f", h.Duration, expectedCount)
+		return fmt.Sprintf("not receiving heartbeat for %s, expected received %d", h.Duration, int(expectedCount))
 	}
 	dropPercent := math.Floor(h.Droprate*10000) / 100
 	return fmt.Sprintf("earliest received time to now takes %s, received: %d, drop percent: %f%%", h.Duration, h.ReceivedCount, dropPercent)
