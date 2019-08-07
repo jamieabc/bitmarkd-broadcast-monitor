@@ -21,7 +21,6 @@ loop:
 			}
 			log.Infof("remote height %d with digest %s", height, digest)
 		case <-n.CheckTimer().C:
-			log.Debug("time to check remote block")
 			info, err := remoteInfo(n)
 			if nil != err {
 				log.Errorf("get remote info error: %s", err)
