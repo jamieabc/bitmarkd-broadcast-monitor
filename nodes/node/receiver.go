@@ -25,7 +25,7 @@ const (
 )
 
 func receiverLoop(n Node, rs recorders, id int) {
-	eventChannel := make(chan zmq.Polled, 10)
+	eventChannel := make(chan zmq.Polled, 100)
 	log := n.Log()
 
 	poller, err := network.NewPoller(eventChannel, shutdownChan, id)
