@@ -52,6 +52,7 @@ func receiverLoop(n Node, rs recorders, id int) {
 				}
 				process(n, rs, data, &checked)
 			case <-shutdownChan:
+				log.Infof("terminate receiver loop")
 				return
 			case <-checkTimer:
 				checked = false

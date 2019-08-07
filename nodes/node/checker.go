@@ -18,6 +18,7 @@ loop:
 	for {
 		select {
 		case <-shutdownChan:
+			log.Info("terminate checker loop")
 			break loop
 		case <-timer:
 			log.Infof("heartbeat summary: %s", rs.heartbeat.Summary().(*recorder.HeartbeatSummary))

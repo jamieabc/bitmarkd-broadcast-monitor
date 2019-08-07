@@ -170,11 +170,7 @@ func (n *node) Monitor() {
 	n.checkTimer.Reset(checkIntervalSecond)
 	go senderLoop(n)
 
-loop:
-	select {
-	case <-shutdownChan:
-		break loop
-	}
+	<-shutdownChan
 
 	n.Log().Info("stop")
 	return

@@ -11,7 +11,7 @@ loop:
 	for {
 		select {
 		case <-shutdownChan:
-			log.Infof("receive shutdownChan signal")
+			log.Infof("terminate sender loop")
 			break loop
 		case <-notifyChan:
 			digest, height, err := remoteDigestOfHeight(n)
@@ -30,7 +30,6 @@ loop:
 			n.CheckTimer().Reset(checkIntervalSecond)
 		}
 	}
-	log.Infof("finish")
 }
 
 func remoteInfo(n Node) (*communication.InfoResponse, error) {
