@@ -1,6 +1,7 @@
 package node
 
 import (
+	"encoding/hex"
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
@@ -92,6 +93,7 @@ func process(n Node, rs recorders, data [][]byte, checked *bool) {
 	case assetCmdStr, issueCmdStr, transferCmdStr:
 		trx := data[2]
 
+		log.Debugf("raw transaction data: %s", hex.EncodeToString(trx))
 		txID, err := transactionID(trx, blockchain, log)
 		if nil != err {
 			return
