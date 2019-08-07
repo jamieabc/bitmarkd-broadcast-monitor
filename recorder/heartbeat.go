@@ -24,7 +24,7 @@ type HeartbeatSummary struct {
 	Droprate      float64
 }
 
-var expectedReceivedCount float64
+var fullCycleReceivedCount float64
 
 func (h *HeartbeatSummary) String() string {
 	if 0 == h.ReceivedCount {
@@ -81,7 +81,7 @@ func (h *heartbeat) Summary() interface{} {
 	return &HeartbeatSummary{
 		Duration:      duration,
 		ReceivedCount: count,
-		Droprate:      h.droprate(count),
+		Droprate:      h.droprate(count, duration),
 	}
 }
 
@@ -114,8 +114,15 @@ func (h *heartbeat) chooseClosestLatestReceiveTime(latestReceivedTime time.Time)
 	return latestReceivedTime
 }
 
-func (h *heartbeat) droprate(actualReceived uint16) float64 {
+func (h *heartbeat) droprate(actualReceived uint16, duration time.Duration) float64 {
 	if 0 == actualReceived {
+		return float64(0)
+	}
+	expectedReceivedCount := fullCycleReceivedCount
+	if duration < expiredTimeInterval {
+		expectedReceivedCount = math.Floor(duration.Seconds() / h.intervalSecond)
+	}
+	if 0 == expectedReceivedCount {
 		return float64(0)
 	}
 
@@ -130,7 +137,7 @@ func NewHeartbeat(intervalSecond float64, shutdownChan <-chan struct{}) Recorder
 		intervalSecond: intervalSecond,
 		shutdownChan:   shutdownChan,
 	}
-	expectedReceivedCount = math.Floor(expiredTimeInterval.Seconds() / intervalSecond)
+	fullCycleReceivedCount = math.Floor(expiredTimeInterval.Seconds() / intervalSecond)
 	c := clock.NewClock()
 	go h.CleanupPeriodically(c)
 	return h
