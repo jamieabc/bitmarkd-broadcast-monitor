@@ -11,10 +11,9 @@ import (
 
 type heartbeat struct {
 	sync.Mutex
-	data           map[receivedAt]expiredAt
-	nextItemID     int
-	intervalSecond float64
-	shutdownChan   <-chan struct{}
+	data         map[receivedAt]expiredAt
+	nextItemID   int
+	shutdownChan <-chan struct{}
 }
 
 //HeartbeatSummary - summary of heartbeat data
@@ -24,11 +23,15 @@ type HeartbeatSummary struct {
 	Droprate      float64
 }
 
-var fullCycleReceivedCount float64
+var (
+	fullCycleReceivedCount float64
+	intervalSecond         float64
+)
 
 func (h *HeartbeatSummary) String() string {
 	if 0 == h.ReceivedCount {
-		return fmt.Sprintf("not receiving heartbeat for %s", h.Duration)
+		expectedCount := math.Floor(h.Duration.Seconds() / intervalSecond)
+		return fmt.Sprintf("not receiving heartbeat for %s, expected received %f", h.Duration, expectedCount)
 	}
 	dropPercent := math.Floor(h.Droprate*10000) / 100
 	return fmt.Sprintf("earliest received time to now takes %s, received: %d, drop percent: %f%%", h.Duration, h.ReceivedCount, dropPercent)
@@ -52,7 +55,7 @@ loop:
 			break loop
 		case <-timer:
 			cleanupExpiredHeartbeat(h)
-			timer = c.After(time.Duration(h.intervalSecond) * time.Second)
+			timer = c.After(time.Duration(intervalSecond) * time.Second)
 		}
 	}
 }
@@ -108,7 +111,7 @@ func durationFromEarliestReceive(h *heartbeat) (time.Duration, time.Time) {
 
 func (h *heartbeat) chooseClosestLatestReceiveTime(latestReceivedTime time.Time) time.Time {
 	now := time.Now()
-	if now.Sub(latestReceivedTime).Seconds() >= h.intervalSecond {
+	if now.Sub(latestReceivedTime).Seconds() >= intervalSecond {
 		return now
 	}
 	return latestReceivedTime
@@ -120,7 +123,7 @@ func (h *heartbeat) droprate(actualReceived uint16, duration time.Duration) floa
 	}
 	expectedReceivedCount := fullCycleReceivedCount
 	if duration < expiredTimeInterval {
-		expectedReceivedCount = math.Floor(duration.Seconds() / h.intervalSecond)
+		expectedReceivedCount = math.Floor(duration.Seconds() / intervalSecond)
 	}
 	if 0 == expectedReceivedCount {
 		return float64(0)
@@ -131,13 +134,13 @@ func (h *heartbeat) droprate(actualReceived uint16, duration time.Duration) floa
 }
 
 //NewHeartbeat - new heartbeat
-func NewHeartbeat(intervalSecond float64, shutdownChan <-chan struct{}) Recorder {
+func NewHeartbeat(interval float64, shutdownChan <-chan struct{}) Recorder {
 	h := &heartbeat{
-		data:           make(map[receivedAt]expiredAt),
-		intervalSecond: intervalSecond,
-		shutdownChan:   shutdownChan,
+		data:         make(map[receivedAt]expiredAt),
+		shutdownChan: shutdownChan,
 	}
-	fullCycleReceivedCount = math.Floor(expiredTimeInterval.Seconds() / intervalSecond)
+	fullCycleReceivedCount = math.Floor(expiredTimeInterval.Seconds() / interval)
+	intervalSecond = interval
 	c := clock.NewClock()
 	go h.CleanupPeriodically(c)
 	return h
