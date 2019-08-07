@@ -106,7 +106,7 @@ func process(n Node, rs recorders, data [][]byte, checked *bool) {
 		rs.heartbeat.Add(now)
 
 	default:
-		log.Infof("receive %s", category)
+		log.Debugf("receive %s", category)
 	}
 }
 
