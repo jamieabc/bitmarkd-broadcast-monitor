@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/fault"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/network"
@@ -33,18 +34,18 @@ func main() {
 	if nil != err {
 		return
 	}
-
 	fmt.Printf("config: \n%s\n", config.String())
 
 	err = initializeLogger(config)
 	defer logger.Finalise()
 
-	log := logger.New("main")
-	defer log.Info("shutdown...")
-
 	if nil != err {
+		fmt.Printf("logger initialise with error: %s", err)
 		return
 	}
+
+	log := logger.New("main")
+	defer log.Info("shutdown...")
 
 	log.Info("auth zmq")
 
@@ -55,18 +56,20 @@ func main() {
 
 	log.Info("initialize nodes")
 
-	node, err := initializeNodes(config)
+	n, err := initializeNodes(config)
 	if nil != err {
 		return
 	}
-	defer node.StopMonitor()
 
-	node.Monitor()
+	n.Monitor()
 
+	fmt.Printf("sleep")
+	time.Sleep(10 * time.Second)
 	ch := make(chan os.Signal)
-	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
-	sig := <-ch
-	log.Infof("receive signal: %v", sig)
+	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
+	<-ch
+	fmt.Printf("hihi\n")
+	n.StopMonitor()
 	log.Flush()
 
 	return

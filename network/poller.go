@@ -62,7 +62,6 @@ func (p *poller) Add(client Client, events zmq.State) {
 	// preserve the event mask
 	p.sockets[socket] = events
 
-	fmt.Printf("add socket to internal")
 	// add to the internal p
 	p.poll.Add(socket, events)
 }
