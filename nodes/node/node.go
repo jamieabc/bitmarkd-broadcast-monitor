@@ -49,8 +49,7 @@ type nodeKeys struct {
 }
 
 const (
-	receiveBroadcastIntervalInSecond = 120 * time.Second
-	checkIntervalSecond              = 10 * time.Second
+	checkIntervalSecond = 2 * time.Minute
 )
 
 var (

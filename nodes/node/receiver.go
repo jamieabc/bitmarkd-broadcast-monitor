@@ -15,11 +15,12 @@ import (
 )
 
 const (
-	assetCmdStr     = "assets"
-	issueCmdStr     = "issues"
-	transferCmdStr  = "transfer"
-	blockCmdStr     = "block"
-	heartbeatCmdStr = "heart"
+	assetCmdStr                      = "assets"
+	issueCmdStr                      = "issues"
+	transferCmdStr                   = "transfer"
+	blockCmdStr                      = "block"
+	heartbeatCmdStr                  = "heart"
+	receiveBroadcastIntervalInSecond = 120 * time.Second
 )
 
 func receiverLoop(n Node, rs recorders, id int) {
