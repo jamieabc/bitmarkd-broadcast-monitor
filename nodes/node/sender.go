@@ -17,7 +17,6 @@ loop:
 			digest, height, err := remoteDigestOfHeight(n)
 			if nil != err {
 				log.Errorf("get remote digest of height with error: %s", err)
-				return
 			}
 			log.Infof("remote height %d with digest %s", height, digest)
 		case <-n.CheckTimer().C:
