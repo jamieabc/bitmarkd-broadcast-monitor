@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/fault"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/network"
@@ -63,12 +62,9 @@ func main() {
 
 	n.Monitor()
 
-	fmt.Printf("sleep")
-	time.Sleep(10 * time.Second)
 	ch := make(chan os.Signal)
 	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
 	<-ch
-	fmt.Printf("hihi\n")
 	n.StopMonitor()
 	log.Flush()
 
