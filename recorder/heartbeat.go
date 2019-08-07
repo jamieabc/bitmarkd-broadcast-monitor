@@ -75,14 +75,6 @@ func (h *heartbeat) Summary() interface{} {
 	defer h.Unlock()
 
 	count := uint16(len(h.data))
-	if 0 == count {
-		return &HeartbeatSummary{
-			Duration:      0,
-			ReceivedCount: 0,
-			Droprate:      0,
-		}
-	}
-
 	duration, earliest := durationFromEarliestReceive(h)
 	updateOverallEarliestTime(earliest)
 
@@ -123,7 +115,7 @@ func (h *heartbeat) chooseClosestLatestReceiveTime(latestReceivedTime time.Time)
 }
 
 func (h *heartbeat) droprate(actualReceived uint16) float64 {
-	if 0 == expectedReceivedCount || expectedReceivedCount == float64(actualReceived) {
+	if 0 == actualReceived {
 		return float64(0)
 	}
 

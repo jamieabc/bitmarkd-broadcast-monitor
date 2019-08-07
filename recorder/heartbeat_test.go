@@ -33,10 +33,11 @@ func setupHeartbeat() recorder.Recorder {
 
 func TestNewHeartbeat(t *testing.T) {
 	r := setupHeartbeat()
+	now := time.Now()
 
 	summary := r.Summary().(*recorder.HeartbeatSummary)
 
-	assert.Equal(t, time.Duration(0), summary.Duration, "wrong initial heartbeat duration")
+	assert.WithinDuration(t, now, now.Add(summary.Duration), 1*time.Second, "wrong initial heartbeat duration")
 	assert.Equal(t, uint16(0), summary.ReceivedCount, "wrong initial heartbeat count")
 	assert.Equal(t, float64(0), summary.Droprate, "wrong initial drop rate")
 }
