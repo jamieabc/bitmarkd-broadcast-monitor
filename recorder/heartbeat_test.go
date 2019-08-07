@@ -27,6 +27,7 @@ func init() {
 }
 
 func setupHeartbeat() recorder.Recorder {
+	recorder.Initialise(heartbeatShutdownChan)
 	return recorder.NewHeartbeat(heartbeatInterval, heartbeatShutdownChan)
 }
 

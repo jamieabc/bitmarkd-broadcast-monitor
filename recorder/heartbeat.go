@@ -28,10 +28,10 @@ var expectedReceivedCount float64
 
 func (h *HeartbeatSummary) String() string {
 	if 0 == h.ReceivedCount {
-		return "not receive any heartbeat yet"
+		return fmt.Sprintf("not receiving heartbeat for %s", h.Duration)
 	}
 	dropPercent := math.Floor(h.Droprate*10000) / 100
-	return fmt.Sprintf("earliest received to now takes %s, received: %d, drop percent: %f%%", h.Duration, h.ReceivedCount, dropPercent)
+	return fmt.Sprintf("earliest received time to now takes %s, received: %d, drop percent: %f%%", h.Duration, h.ReceivedCount, dropPercent)
 }
 
 //Add - add received heartbeat record
@@ -83,9 +83,8 @@ func (h *heartbeat) Summary() interface{} {
 		}
 	}
 
-	now := time.Now()
-	earliest := findEarliest(h.data)
-	duration := now.Sub(earliest)
+	duration, earliest := durationFromEarliestReceive(h)
+	updateOverallEarliestTime(earliest)
 
 	return &HeartbeatSummary{
 		Duration:      duration,
@@ -94,14 +93,33 @@ func (h *heartbeat) Summary() interface{} {
 	}
 }
 
-func findEarliest(data map[receivedAt]expiredAt) time.Time {
-	earliest := time.Time{}
-	for k := range data {
-		if (time.Time{}) == earliest || earliest.After(time.Time(k)) {
+func updateOverallEarliestTime(earliest time.Time) {
+	if earliest.Before(overallEarliestTime) {
+		overallEarliestTime = earliest
+	}
+}
+
+func durationFromEarliestReceive(h *heartbeat) (time.Duration, time.Time) {
+	earliest := overallEarliestTime
+	latest := time.Time{}
+	for k := range h.data {
+		if earliest.After(time.Time(k)) {
 			earliest = time.Time(k)
 		}
+		if latest.Before(time.Time(k)) {
+			latest = time.Time(k)
+		}
 	}
-	return earliest
+	actualLatest := h.chooseClosestLatestReceiveTime(latest)
+	return actualLatest.Sub(earliest), earliest
+}
+
+func (h *heartbeat) chooseClosestLatestReceiveTime(latestReceivedTime time.Time) time.Time {
+	now := time.Now()
+	if now.Sub(latestReceivedTime).Seconds() >= h.intervalSecond {
+		return now
+	}
+	return latestReceivedTime
 }
 
 func (h *heartbeat) droprate(actualReceived uint16) float64 {

@@ -20,7 +20,12 @@ const (
 	expiredTimeInterval = 2 * time.Hour
 )
 
+var (
+	overallEarliestTime time.Time
+)
+
 //Initialise
 func Initialise(shutdown <-chan struct{}) {
 	initialiseTransactions(shutdown)
+	overallEarliestTime = time.Now()
 }
