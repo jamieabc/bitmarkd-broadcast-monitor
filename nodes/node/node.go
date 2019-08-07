@@ -39,6 +39,7 @@ type node struct {
 	heartbeatRecorder   recorder.Recorder
 	id                  int
 	log                 *logger.L
+	name                string
 	transactionRecorder recorder.Recorder
 }
 

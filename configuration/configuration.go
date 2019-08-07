@@ -62,6 +62,7 @@ var (
 func Parse(configFile string) (Configuration, error) {
 	filePath, err := filepath.Abs(filepath.Clean(configFile))
 	if nil != err {
+		fmt.Printf("generate file path with error: %s", err)
 		return nil, err
 	}
 
@@ -71,6 +72,7 @@ func Parse(configFile string) (Configuration, error) {
 	}
 
 	if err := parseLuaConfigurationFile(filePath, config); nil != err {
+		fmt.Printf("parse lua config with error: %s", err)
 		return nil, err
 	}
 
@@ -99,7 +101,7 @@ func (c *configuration) String() string {
 	str.WriteString("nodes:\n")
 	for i, node := range c.Nodes {
 		str.WriteString(fmt.Sprintf(
-			"\tnode[%d]:\n\t\taddress: \t%s\n\t\tbroadcast port: %s\n\t\tcommand port: \t%s\n\t\tpublic key: \t%s\n\t\tchain: %s\n\t\tname: %s\n",
+			"\tnode[%d]:\n\t\taddress: \t%s\n\t\tbroadcast port: %s\n\t\tcommand port: \t%s\n\t\tpublic key: \t%s\n\t\tchain: %s\n\t\tname: \t%s\n",
 			i,
 			node.AddressIPv4,
 			node.BroadcastPort,

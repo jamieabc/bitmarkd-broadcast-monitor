@@ -29,8 +29,10 @@ func main() {
 		return
 	}
 
+	fmt.Printf("parse config...")
 	config, err := configuration.Parse(configFile)
 	if nil != err {
+		fmt.Printf("parse config with error: %s", err)
 		return
 	}
 	fmt.Printf("config: \n%s\n", config.String())
