@@ -91,15 +91,15 @@ func process(n Node, rs recorders, data [][]byte, checked *bool) {
 		log.Infof("receive block, number: %d, digest: %s", header.Number, digest)
 
 	case assetCmdStr, issueCmdStr, transferCmdStr:
-		trx := data[2]
+		bytes := data[2]
 
-		log.Debugf("raw transaction data: %s", hex.EncodeToString(trx))
-		txID, err := extractID(trx, blockchain, log)
+		log.Debugf("raw transaction data: %s", hex.EncodeToString(bytes))
+		id, err := extractID(bytes, blockchain, log)
 		if nil != err {
 			return
 		}
-		log.Infof("receive %s: transaction ID %s", category, txID)
-		rs.transaction.Add(now, txID)
+		log.Infof("receive %s ID %s", category, hex.EncodeToString(convertDigestToByte(id)))
+		rs.transaction.Add(now, id)
 		if !*checked {
 			*checked = true
 			notifyChan <- struct{}{}
@@ -114,13 +114,21 @@ func process(n Node, rs recorders, data [][]byte, checked *bool) {
 	}
 }
 
-func extractID(rawData []byte, chain string, log *logger.L) (merkle.Digest, error) {
-	_, n, err := transactionrecord.Packed(rawData).Unpack(isTestnet(chain))
+func extractID(bytes []byte, chain string, log *logger.L) (merkle.Digest, error) {
+	_, n, err := transactionrecord.Packed(bytes).Unpack(isTestnet(chain))
 	if nil != err {
 		log.Errorf("unpack transaction with error: %s", err)
 		return merkle.Digest{}, err
 	}
-	return transactionrecord.Packed(rawData[:n]).MakeLink(), nil
+	return transactionrecord.Packed(bytes[:n]).MakeLink(), nil
+}
+
+func convertDigestToByte(d merkle.Digest) []byte {
+	result := make([]byte, merkle.DigestLength)
+	for i := 0; i < merkle.DigestLength; i++ {
+		result[i] = d[merkle.DigestLength-1-i]
+	}
+	return result
 }
 
 func isTestnet(category string) bool {
