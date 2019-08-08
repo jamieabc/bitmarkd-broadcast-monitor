@@ -93,7 +93,7 @@ func process(n Node, rs recorders, data [][]byte, checked *bool) {
 	case assetCmdStr, issueCmdStr, transferCmdStr:
 		bytes := data[2]
 
-		log.Debugf("raw transaction data: %s", hex.EncodeToString(bytes))
+		log.Debugf("raw %s data: %s", category, hex.EncodeToString(bytes))
 		id, err := extractID(bytes, blockchain, log)
 		if nil != err {
 			return
