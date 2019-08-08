@@ -94,7 +94,7 @@ func process(n Node, rs recorders, data [][]byte, checked *bool) {
 		trx := data[2]
 
 		log.Debugf("raw transaction data: %s", hex.EncodeToString(trx))
-		txID, err := transactionID(trx, blockchain, log)
+		txID, err := extractID(trx, blockchain, log)
 		if nil != err {
 			return
 		}
@@ -114,14 +114,13 @@ func process(n Node, rs recorders, data [][]byte, checked *bool) {
 	}
 }
 
-func transactionID(trx []byte, chain string, log *logger.L) (merkle.Digest, error) {
-	_, n, err := transactionrecord.Packed(trx).Unpack(isTestnet(chain))
+func extractID(rawData []byte, chain string, log *logger.L) (merkle.Digest, error) {
+	_, n, err := transactionrecord.Packed(rawData).Unpack(isTestnet(chain))
 	if nil != err {
 		log.Errorf("unpack transaction with error: %s", err)
 		return merkle.Digest{}, err
 	}
-	txID := transactionrecord.Packed(trx[:n]).MakeLink()
-	return txID, nil
+	return transactionrecord.Packed(rawData[:n]).MakeLink(), nil
 }
 
 func isTestnet(category string) bool {
