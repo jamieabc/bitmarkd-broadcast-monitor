@@ -46,7 +46,9 @@ func (t *TransactionSummary) String() string {
 
 //Add - Add transaction
 func (t *transactions) Add(receivedTime time.Time, args ...interface{}) {
-	t.received = true
+	if !t.received {
+		t.received = true
+	}
 	t.add(receivedTime, args)
 	globalTransactions.add(receivedTime, args)
 }

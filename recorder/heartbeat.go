@@ -55,7 +55,9 @@ func notReceivingForTwoHours(h *HeartbeatSummary) string {
 
 //Add - add received heartbeat record
 func (h *heartbeat) Add(t time.Time, args ...interface{}) {
-	h.received = true
+	if !h.received {
+		h.received = true
+	}
 
 	h.Lock()
 	h.data[receivedAt(t)] = expiredAt(t.Add(expiredTimeInterval))
