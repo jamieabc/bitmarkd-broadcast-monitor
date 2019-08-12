@@ -99,7 +99,7 @@ func process(n Node, rs recorders, data [][]byte, checked *bool) {
 		if nil != err {
 			return
 		}
-		log.Infof("receive %s ID %s", category, hex.EncodeToString(convertDigestToByte(id)))
+		log.Infof("receive %s ID %s", category, []byte(fmt.Sprintf("%v", id)))
 		rs.transaction.Add(now, id)
 		if !*checked {
 			*checked = true
@@ -122,14 +122,6 @@ func extractID(bytes []byte, chain string, log *logger.L) (merkle.Digest, error)
 		return merkle.Digest{}, err
 	}
 	return transactionrecord.Packed(bytes[:n]).MakeLink(), nil
-}
-
-func convertDigestToByte(d merkle.Digest) []byte {
-	result := make([]byte, merkle.DigestLength)
-	for i := 0; i < merkle.DigestLength; i++ {
-		result[i] = d[merkle.DigestLength-1-i]
-	}
-	return result
 }
 
 func isTestnet(category string) bool {
