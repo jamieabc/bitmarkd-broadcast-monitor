@@ -134,7 +134,7 @@ func TestHeartbeatCleanupPeriodicallyWhenExpiration(t *testing.T) {
 	assert.Equal(t, uint16(2), summary.ReceivedCount, "wrong count")
 	assert.Equal(t, droprate, summary.Droprate, "wrong droprate")
 
-	go r.CleanupPeriodically(mock)
+	go r.RemoveOutdatedPeriodically(mock)
 	<-time.After(10 * time.Millisecond)
 	heartbeatShutdownChan <- struct{}{}
 	summary = r.Summary().(*recorder.HeartbeatSummary)
@@ -155,7 +155,7 @@ func TestHeartbeatCleanupPeriodicallyWhenNoExpiration(t *testing.T) {
 	assert.Equal(t, uint16(1), summary.ReceivedCount, "wrong count")
 	assert.Equal(t, float64(0), summary.Droprate, "wrong droprate")
 
-	go r.CleanupPeriodically(mock)
+	go r.RemoveOutdatedPeriodically(mock)
 	<-time.After(10 * time.Millisecond)
 	heartbeatShutdownChan <- struct{}{}
 	summary = r.Summary().(*recorder.HeartbeatSummary)

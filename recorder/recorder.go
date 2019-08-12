@@ -9,7 +9,7 @@ import (
 //Recorder - recorder interface
 type Recorder interface {
 	Add(time.Time, ...interface{})
-	CleanupPeriodically(clock clock.Clock)
+	RemoveOutdatedPeriodically(clock clock.Clock)
 	Summary() interface{}
 }
 

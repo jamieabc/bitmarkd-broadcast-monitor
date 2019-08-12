@@ -62,8 +62,8 @@ func (t *transactions) isTxIDExist(txID string) bool {
 	return ok
 }
 
-//CleanupPeriodically - clean expired transaction periodically
-func (t *transactions) CleanupPeriodically(c clock.Clock) {
+//RemoveOutdatedPeriodically - clean expired transaction periodically
+func (t *transactions) RemoveOutdatedPeriodically(c clock.Clock) {
 	timer := c.After(expiredTimeInterval)
 loop:
 	for {

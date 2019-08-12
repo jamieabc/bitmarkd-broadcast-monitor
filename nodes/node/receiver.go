@@ -2,6 +2,7 @@ package node
 
 import (
 	"encoding/hex"
+	"fmt"
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
@@ -38,8 +39,8 @@ func receiverLoop(n Node, rs recorders, id int) {
 	checkTimer := time.After(30 * time.Second)
 	checked := false
 
-	go rs.heartbeat.CleanupPeriodically(timer)
-	go rs.transaction.CleanupPeriodically(timer)
+	go rs.heartbeat.RemoveOutdatedPeriodically(timer)
+	go rs.transaction.RemoveOutdatedPeriodically(timer)
 
 	go func() {
 		for {

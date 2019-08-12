@@ -45,8 +45,8 @@ func (h *heartbeat) Add(t time.Time, args ...interface{}) {
 	h.data[receivedAt(t)] = expiredAt(t.Add(expiredTimeInterval))
 }
 
-//CleanupPeriodically - clean expired heartbeat record periodically
-func (h *heartbeat) CleanupPeriodically(c clock.Clock) {
+//RemoveOutdatedPeriodically - clean expired heartbeat record periodically
+func (h *heartbeat) RemoveOutdatedPeriodically(c clock.Clock) {
 	timer := c.After(expiredTimeInterval)
 loop:
 	for {
@@ -142,6 +142,6 @@ func NewHeartbeat(interval float64, shutdownChan <-chan struct{}) Recorder {
 	fullCycleReceivedCount = math.Floor(expiredTimeInterval.Seconds() / interval)
 	intervalSecond = interval
 	c := clock.NewClock()
-	go h.CleanupPeriodically(c)
+	go h.RemoveOutdatedPeriodically(c)
 	return h
 }
