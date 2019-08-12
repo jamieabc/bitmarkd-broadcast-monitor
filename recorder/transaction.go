@@ -20,25 +20,33 @@ var shutdownChan <-chan struct{}
 type transactions struct {
 	sync.Mutex
 	data       map[string]expiredAt
+	received   bool
 	nextItemID int
 }
 
 //TransactionSummary - summary of received￿￿￿ transactions
 type TransactionSummary struct {
-	Droprate float64
-	Received int
+	Droprate      float64
+	received      bool
+	ReceivedCount int
 }
 
 func (t *TransactionSummary) String() string {
-	if 0 == t.Received {
+	if !t.received {
 		return "not receive any transaction yet"
 	}
+
+	if t.received && 0 == t.ReceivedCount {
+		return "not receive transaction for more than 2 hours"
+	}
+
 	dropPercent := math.Floor(t.Droprate*10000) / 100
-	return fmt.Sprintf("earliest received to now got %d transactions, drop percent: %f%%", t.Received, dropPercent)
+	return fmt.Sprintf("earliest received to now got %d transactions, drop percent: %f%%", t.ReceivedCount, dropPercent)
 }
 
 //Add - Add transaction
 func (t *transactions) Add(receivedTime time.Time, args ...interface{}) {
+	t.received = true
 	t.add(receivedTime, args)
 	globalTransactions.add(receivedTime, args)
 }
@@ -93,10 +101,18 @@ func cleanupExpiredTransaction(t *transactions) {
 func (t *transactions) Summary() interface{} {
 	globalCount := len(globalTransactions.data)
 	if 0 == globalCount {
-		return &TransactionSummary{0, 0}
+		return &TransactionSummary{
+			Droprate:      0,
+			received:      t.received,
+			ReceivedCount: 0,
+		}
 	}
 	dropRate := float64(globalCount-len(t.data)) / float64(globalCount)
-	return &TransactionSummary{dropRate, len(t.data)}
+	return &TransactionSummary{
+		Droprate:      dropRate,
+		received:      t.received,
+		ReceivedCount: len(t.data),
+	}
 }
 
 func initialiseTransactions(shutdown <-chan struct{}) {

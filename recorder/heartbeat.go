@@ -50,7 +50,7 @@ func neverReceive(h *HeartbeatSummary) string {
 
 func notReceivingForTwoHours(h *HeartbeatSummary) string {
 	expectedCount := int(math.Floor(h.Duration.Seconds() / intervalSecond))
-	return fmt.Sprintf("not receiving heartbeat for 2 hours, expected receive count: %d, dorp percent: 100%%", expectedCount)
+	return fmt.Sprintf("not receiving heartbeat for more than 2 hours, expected receive count: %d, dorp percent: 100%%", expectedCount)
 }
 
 //Add - add received heartbeat record
