@@ -13,6 +13,7 @@ type heartbeat struct {
 	sync.Mutex
 	data         map[receivedAt]expiredAt
 	nextItemID   int
+	received     bool
 	shutdownChan <-chan struct{}
 }
 
@@ -20,6 +21,7 @@ type heartbeat struct {
 type HeartbeatSummary struct {
 	Duration      time.Duration
 	ReceivedCount uint16
+	received      bool
 	Droprate      float64
 }
 
@@ -29,7 +31,7 @@ var (
 )
 
 func (h *HeartbeatSummary) String() string {
-	if 0 == h.ReceivedCount {
+	if !h.received {
 		expectedCount := math.Floor(h.Duration.Seconds() / intervalSecond)
 		return fmt.Sprintf("not receiving heartbeat for %s, expected received %d", h.Duration, int(expectedCount))
 	}
@@ -39,10 +41,11 @@ func (h *HeartbeatSummary) String() string {
 
 //Add - add received heartbeat record
 func (h *heartbeat) Add(t time.Time, args ...interface{}) {
-	h.Lock()
-	defer h.Unlock()
+	h.received = true
 
+	h.Lock()
 	h.data[receivedAt(t)] = expiredAt(t.Add(expiredTimeInterval))
+	h.Unlock()
 }
 
 //RemoveOutdatedPeriodically - clean expired heartbeat record periodically
@@ -62,30 +65,35 @@ loop:
 
 func cleanupExpiredHeartbeat(h *heartbeat) {
 	now := time.Now()
+
 	h.Lock()
-	defer h.Unlock()
 
 	for k, v := range h.data {
 		if now.After(time.Time(v)) {
 			delete(h.data, k)
 		}
 	}
+
+	h.Unlock()
 }
 
 //Summary - summarize heartbeat data
 func (h *heartbeat) Summary() interface{} {
 	h.Lock()
-	defer h.Unlock()
 
 	count := uint16(len(h.data))
 	duration, earliest := durationFromEarliestReceive(h)
 	updateOverallEarliestTime(earliest)
 
+	h.Unlock()
+
 	return &HeartbeatSummary{
 		Duration:      duration,
 		ReceivedCount: count,
+		received:      h.received,
 		Droprate:      h.droprate(count, duration),
 	}
+
 }
 
 func updateOverallEarliestTime(earliest time.Time) {
