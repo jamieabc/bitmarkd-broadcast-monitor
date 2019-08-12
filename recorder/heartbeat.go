@@ -32,11 +32,25 @@ var (
 
 func (h *HeartbeatSummary) String() string {
 	if !h.received {
-		expectedCount := math.Floor(h.Duration.Seconds() / intervalSecond)
-		return fmt.Sprintf("not receiving heartbeat for %s, expected received %d", h.Duration, int(expectedCount))
+		return neverReceive(h)
 	}
+
+	if h.received && 0 == h.ReceivedCount {
+		return notReceivingForTwoHours(h)
+	}
+
 	dropPercent := math.Floor(h.Droprate*10000) / 100
 	return fmt.Sprintf("earliest received time to now takes %s, received: %d, drop percent: %f%%", h.Duration, h.ReceivedCount, dropPercent)
+}
+
+func neverReceive(h *HeartbeatSummary) string {
+	expectedCount := math.Floor(h.Duration.Seconds() / intervalSecond)
+	return fmt.Sprintf("not receiving heartbeat for %s, expected received %d", h.Duration, int(expectedCount))
+}
+
+func notReceivingForTwoHours(h *HeartbeatSummary) string {
+	expectedCount := int(math.Floor(h.Duration.Seconds() / intervalSecond))
+	return fmt.Sprintf("not receiving heartbeat for 2 hours, expected receive count: %d, dorp percent: 100%%", expectedCount)
 }
 
 //Add - add received heartbeat record
