@@ -22,46 +22,18 @@ const (
 	transferCmdStr                   = "transfer"
 	blockCmdStr                      = "block"
 	heartbeatCmdStr                  = "heart"
+	checkTimeSecond                  = 60 * time.Second
 	receiveBroadcastIntervalInSecond = 120 * time.Second
+	eventChannelSize                 = 100
 )
 
 func receiverLoop(n Node, rs recorders, id int) {
-	eventChannel := make(chan zmq.Polled, 100)
 	log := n.Log()
-
-	poller, err := network.NewPoller(eventChannel, shutdownChan, id)
-	if nil != err {
-		log.Errorf("create poller with error: %s", err)
-		return
-	}
-	poller.Add(n.BroadcastReceiver(), zmq.POLLIN)
 	timer := clock.NewClock()
-	checkTimer := time.After(30 * time.Second)
-	checked := false
 
 	go rs.heartbeat.RemoveOutdatedPeriodically(timer)
 	go rs.transaction.RemoveOutdatedPeriodically(timer)
-
-	go func() {
-		for {
-			_ = poller.Start(receiveBroadcastIntervalInSecond)
-			select {
-			case polled := <-eventChannel:
-				data, err := polled.Socket.RecvMessageBytes(0)
-				if nil != err {
-					log.Errorf("receive error: %s", err)
-					continue
-				}
-				process(n, rs, data, &checked)
-			case <-shutdownChan:
-				log.Infof("terminate receiver loop")
-				return
-			case <-checkTimer:
-				checked = false
-				checkTimer = time.After(30 * time.Second)
-			}
-		}
-	}()
+	go receiverRoutine(n, rs, id)
 
 	<-shutdownChan
 
@@ -71,6 +43,47 @@ func receiverLoop(n Node, rs recorders, id int) {
 	log.Flush()
 
 	return
+}
+
+func receiverRoutine(n Node, rs recorders, id int) {
+	eventChan := make(chan zmq.Polled, eventChannelSize)
+	log := n.Log()
+	checkTimer := time.After(checkTimeSecond)
+	checked := false
+
+	poller, err := initializePoller(n, id, eventChan)
+	if nil != err {
+		log.Errorf("initialize poller with error: %s", err)
+		return
+	}
+
+	for {
+		_ = poller.Start(receiveBroadcastIntervalInSecond)
+		select {
+		case polled := <-eventChan:
+			data, err := polled.Socket.RecvMessageBytes(0)
+			if nil != err {
+				log.Errorf("receive message with error: %s", err)
+				continue
+			}
+			process(n, rs, data, &checked)
+		case <-shutdownChan:
+			log.Infof("terminate receiver loop")
+			return
+		case <-checkTimer:
+			checked = false
+			checkTimer = time.After(checkTimeSecond)
+		}
+	}
+}
+
+func initializePoller(n Node, id int, eventChan chan zmq.Polled) (network.Poller, error) {
+	poller, err := network.NewPoller(eventChan, shutdownChan, id)
+	if nil != err {
+		return nil, err
+	}
+	poller.Add(n.BroadcastReceiver(), zmq.POLLIN)
+	return poller, nil
 }
 
 func process(n Node, rs recorders, data [][]byte, checked *bool) {
