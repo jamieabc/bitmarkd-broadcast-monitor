@@ -44,7 +44,7 @@ loop:
 }
 
 func remoteInfo(n Node) (*communication.InfoResponse, error) {
-	info, err := n.Client().Info()
+	info, err := n.Remote().Info()
 	if nil != err {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func remoteInfo(n Node) (*communication.InfoResponse, error) {
 }
 
 func remoteHeight(n Node) (uint64, error) {
-	height, err := n.Client().Height()
+	height, err := n.Remote().Height()
 	if nil != err {
 		return uint64(0), err
 	}
@@ -60,7 +60,7 @@ func remoteHeight(n Node) (uint64, error) {
 }
 
 func remoteDigestOfHeight(n Node, height uint64) (blockdigest.Digest, error) {
-	digest, err := n.Client().DigestOfHeight(height)
+	digest, err := n.Remote().DigestOfHeight(height)
 	if nil != err {
 		return blockdigest.Digest{}, err
 	}

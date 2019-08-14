@@ -24,7 +24,9 @@ const (
 	heartbeatCmdStr                  = "heart"
 	checkTimeSecond                  = 60 * time.Second
 	receiveBroadcastIntervalInSecond = 120 * time.Second
+	heartbeatTimeoutSecond           = 120 * time.Second
 	eventChannelSize                 = 100
+	reconnectDelayMillisecond        = 5 * time.Millisecond
 )
 
 func receiverLoop(n Node, rs recorders, id int) {
@@ -49,6 +51,7 @@ func receiverRoutine(n Node, rs recorders, id int) {
 	eventChan := make(chan zmq.Polled, eventChannelSize)
 	log := n.Log()
 	checkTimer := time.After(checkTimeSecond)
+	heartbeatTimer := time.After(heartbeatTimeoutSecond)
 	checked := false
 
 	poller, err := initializePoller(n, id, eventChan)
@@ -64,15 +67,27 @@ func receiverRoutine(n Node, rs recorders, id int) {
 			data, err := polled.Socket.RecvMessageBytes(0)
 			if nil != err {
 				log.Errorf("receive message with error: %s", err)
+				//error might comes from reopen socket, will behave normal after some retries
 				continue
 			}
-			process(n, rs, data, &checked)
+			process(n, rs, data, &checked, &heartbeatTimer)
 		case <-shutdownChan:
 			log.Infof("terminate receiver loop")
 			return
 		case <-checkTimer:
 			checked = false
 			checkTimer = time.After(checkTimeSecond)
+		case <-heartbeatTimer:
+			log.Warn("heartbeat timeout exceed, reopen heartbeat socket")
+			poller.Remove(n.BroadcastReceiver())
+			err = n.BroadcastReceiver().Reconnect()
+			if nil != err {
+				log.Errorf("reconnect with error: %s, abort", err)
+				return
+			}
+			poller.Add(n.BroadcastReceiver(), zmq.POLLIN)
+			time.Sleep(reconnectDelayMillisecond)
+			heartbeatTimer = time.After(heartbeatTimeoutSecond)
 		}
 	}
 }
@@ -86,7 +101,7 @@ func initializePoller(n Node, id int, eventChan chan zmq.Polled) (network.Poller
 	return poller, nil
 }
 
-func process(n Node, rs recorders, data [][]byte, checked *bool) {
+func process(n Node, rs recorders, data [][]byte, checked *bool, heartbeatTimer *<-chan time.Time) {
 	log := n.Log()
 	blockchain := string(data[0])
 	if !chain.Valid(blockchain) {
@@ -122,6 +137,7 @@ func process(n Node, rs recorders, data [][]byte, checked *bool) {
 	case heartbeatCmdStr:
 		log.Infof("receive heartbeat")
 		rs.heartbeat.Add(now)
+		*heartbeatTimer = time.After(heartbeatTimeoutSecond)
 
 	default:
 		log.Debugf("receive %s", category)
