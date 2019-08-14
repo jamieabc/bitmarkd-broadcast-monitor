@@ -149,7 +149,9 @@ func (h *heartbeat) droprate(actualReceived uint16, duration time.Duration) floa
 	if duration < expiredTimeInterval {
 		expectedReceivedCount = math.Floor(duration.Seconds() / intervalSecond)
 	}
-	if 0 == expectedReceivedCount {
+
+	//in case heartbeat time just arrive after monitor start, causes +1 count and make drop percent < 0
+	if 0 == expectedReceivedCount || float64(actualReceived) >= expectedReceivedCount {
 		return float64(0)
 	}
 

@@ -63,26 +63,10 @@ func TestHeartbeatSummaryWhenEdge(t *testing.T) {
 		r.Add(now.Add(time.Duration(-1*i) * time.Second))
 	}
 	summary := r.Summary().(*recorder.HeartbeatSummary)
-	expectedReceivedCount := float64((size - 1) / intervalSecond)
 
 	assert.WithinDuration(t, now, now.Add(time.Duration(size-1)*time.Second), summary.Duration, "wrong duration")
 	assert.Equal(t, uint16(size), summary.ReceivedCount, "wrong heartbeat count")
-	assert.Equal(t, (expectedReceivedCount-float64(summary.ReceivedCount))/expectedReceivedCount, summary.Droprate, "wrong droprate")
-}
-
-func TestHeartbeatSummaryWhenCycle(t *testing.T) {
-	r := setupHeartbeat()
-	now := time.Now()
-	size := 100
-	for i := 0; i < size; i++ {
-		r.Add(now.Add(time.Duration(-1*i) * time.Second))
-	}
-	summary := r.Summary().(*recorder.HeartbeatSummary)
-	expectedReceivedCount := float64((size - 1) / intervalSecond)
-
-	assert.WithinDuration(t, now, now.Add(time.Duration(size-1)*time.Second), summary.Duration, "wrong duration")
-	assert.Equal(t, uint16(size), summary.ReceivedCount, "wrong heartbeat count")
-	assert.Equal(t, (expectedReceivedCount-float64(summary.ReceivedCount))/expectedReceivedCount, summary.Droprate, "wrong droprate")
+	assert.Equal(t, float64(0), summary.Droprate, "wrong droprate")
 }
 
 func TestHeartbeatSummaryWhenDrop(t *testing.T) {
@@ -103,7 +87,7 @@ func TestHeartbeatSummaryWhenDrop(t *testing.T) {
 	assert.Equal(t, (expectedReceivedCount-float64(summary.ReceivedCount))/expectedReceivedCount, summary.Droprate, "wrong droprate")
 }
 
-func TestHeartbeatSummaryWhenEnough(t *testing.T) {
+func TestHeartbeatSummaryWhenNormal(t *testing.T) {
 	r := setupHeartbeat()
 	now := time.Now()
 	size := 15
@@ -111,14 +95,28 @@ func TestHeartbeatSummaryWhenEnough(t *testing.T) {
 		r.Add(now.Add(time.Duration(-1*i) * time.Second))
 	}
 	summary := r.Summary().(*recorder.HeartbeatSummary)
-	expectedReceivedCount := float64(size-1) / intervalSecond
 
 	assert.WithinDuration(t, now, now.Add(time.Duration(size-1)*time.Second), summary.Duration, "wrong duration")
 	assert.Equal(t, uint16(size), summary.ReceivedCount, "wrong heartbeat count")
-	assert.Equal(t, (expectedReceivedCount-float64(summary.ReceivedCount))/expectedReceivedCount, summary.Droprate, "wrong droprate")
+	assert.Equal(t, float64(0), summary.Droprate, "wrong droprate")
 }
 
-func TestHeartbeatCleanupPeriodicallyWhenExpiration(t *testing.T) {
+func TestHeartbeatSummaryWhenMore(t *testing.T) {
+	r := setupHeartbeat()
+	now := time.Now()
+	size := 20
+	for i := 0; i < size; i++ {
+		r.Add(now.Add(time.Duration(-1*i) * time.Second))
+	}
+	r.Add(now.Add(time.Duration(-1500) * time.Millisecond))
+	summary := r.Summary().(*recorder.HeartbeatSummary)
+
+	assert.WithinDuration(t, now, now.Add(time.Duration(size-1)*time.Second), summary.Duration, "wrong duration")
+	assert.Equal(t, uint16(size+1), summary.ReceivedCount, "wrong heartbeat count")
+	assert.Equal(t, float64(0), summary.Droprate, "wrong droprate")
+}
+
+func TestHeartbeatRemoveOutdatedPeriodicallyWhenExpiration(t *testing.T) {
 	ctl, mock := setupTestClock(t)
 	defer ctl.Finish()
 
@@ -142,7 +140,7 @@ func TestHeartbeatCleanupPeriodicallyWhenExpiration(t *testing.T) {
 	assert.Equal(t, (fullCycleExpectedReceivedCount-float64(1))/fullCycleExpectedReceivedCount, summary.Droprate, "wrong droprate")
 }
 
-func TestHeartbeatCleanupPeriodicallyWhenNoExpiration(t *testing.T) {
+func TestHeartbeatRemoveOutdatedPeriodicallyWhenNoExpiration(t *testing.T) {
 	ctl, mock := setupTestClock(t)
 	defer ctl.Finish()
 
