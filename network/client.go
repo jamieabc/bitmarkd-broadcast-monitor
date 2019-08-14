@@ -35,7 +35,6 @@ type client struct {
 	v6              bool
 	socketType      zmq.Type
 	socket          *zmq.Socket
-	poller          Poller
 	events          zmq.State
 	timeout         time.Duration
 	timestamp       time.Time
@@ -74,7 +73,6 @@ func NewClient(socketType zmq.Type, privateKey []byte, publicKey []byte, timeout
 		v6:              false,
 		socketType:      socketType,
 		socket:          nil,
-		poller:          nil,
 		events:          0,
 		timeout:         timeout,
 		timestamp:       time.Now(),
@@ -211,10 +209,6 @@ func (client *client) openSocket() error {
 	globalClientData.clients[socket] = client
 	globalClientData.Unlock()
 
-	// add to poller
-	if nil != client.poller {
-		client.poller.Add(client, client.events)
-	}
 	return nil
 failure:
 	socket.Close()
@@ -229,11 +223,6 @@ func (client *client) closeSocket() error {
 
 	if nil == client.socket {
 		return nil
-	}
-
-	// stop any polling
-	if nil != client.poller {
-		client.poller.Remove(client.socket)
 	}
 
 	// if already connected, disconnect first
@@ -288,13 +277,12 @@ func (client *client) IsConnectedTo(serverPublicKey []byte) bool {
 
 // close and reopen the connection
 func (client *client) Reconnect() error {
-	_, err := client.reconnectReturningSocket()
+	_, err := client.reopenSocket()
 	return err
 }
 
-// close and reopen the connection
-func (client *client) reconnectReturningSocket() (*zmq.Socket, error) {
-
+// close and open socket
+func (client *client) reopenSocket() (*zmq.Socket, error) {
 	err := client.closeSocket()
 	if nil != err {
 		return nil, err
@@ -444,7 +432,7 @@ func (client *client) Socket() *zmq.Socket {
 	return client.socket
 }
 
-// Client - network client interface
+// Remote - network client interface
 type Client interface {
 	Close() error
 	Connect(conn *Connection, serverPublicKey []byte, prefix string) error

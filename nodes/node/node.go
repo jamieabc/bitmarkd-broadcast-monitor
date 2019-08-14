@@ -18,7 +18,7 @@ type Node interface {
 	BroadcastReceiver() network.Client
 	CommandSenderAndReceiver() network.Client
 	CheckTimer() *time.Timer
-	Client() Remote
+	Remote() Remote
 	CloseConnection() error
 	DropRate()
 	Log() *logger.L
@@ -34,7 +34,7 @@ type recorders struct {
 
 type node struct {
 	checkTimer          *time.Timer
-	client              Remote
+	remote              Remote
 	config              configuration.NodeConfig
 	heartbeatRecorder   recorder.Recorder
 	id                  int
@@ -86,7 +86,7 @@ func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int, 
 
 	log.Debugf("public key: %q, private key: %q, remote public key: %q", nodeKey.public, nodeKey.private, nodeKey.remotePublic)
 
-	n.client, err = newClient(config, nodeKey)
+	n.remote, err = newClient(config, nodeKey)
 	if nil != err {
 		return nil, err
 	}
@@ -123,12 +123,12 @@ func parseKeys(keys configuration.Keys, remotePublicKeyStr string) (*nodeKeys, e
 
 //BroadcastReceiverClient - get zmq broadcast receiver remote
 func (n *node) BroadcastReceiver() network.Client {
-	return n.client.BroadcastReceiver()
+	return n.remote.BroadcastReceiver()
 }
 
 //CommandSenderAndReceiver - network remote of command sender and receiver
 func (n *node) CommandSenderAndReceiver() network.Client {
-	return n.client.CommandSenderAndReceiver()
+	return n.remote.CommandSenderAndReceiver()
 }
 
 //CheckTimer - get sender timer
@@ -137,13 +137,13 @@ func (n *node) CheckTimer() *time.Timer {
 }
 
 //Remote - return remote interface
-func (n *node) Client() Remote {
-	return n.client
+func (n *node) Remote() Remote {
+	return n.remote
 }
 
 //CloseConnection - close connection
 func (n *node) CloseConnection() error {
-	if err := n.client.Close(); nil != err {
+	if err := n.remote.Close(); nil != err {
 		return err
 	}
 	return nil

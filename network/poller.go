@@ -69,8 +69,8 @@ func (p *poller) Add(client Client, events zmq.State) {
 }
 
 // remove a socket from a poll
-func (p *poller) Remove(socket *zmq.Socket) {
-
+func (p *poller) Remove(client Client) {
+	socket := client.Socket()
 	p.Lock()
 	defer p.Unlock()
 
@@ -123,6 +123,6 @@ func waitShutdownEvent(p *poller) {
 // Poller - poll interface
 type Poller interface {
 	Add(client Client, events zmq.State)
-	Remove(socket *zmq.Socket)
+	Remove(client Client)
 	Start(timeout time.Duration) error
 }
