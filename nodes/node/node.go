@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/recorder"
+
 	"github.com/bitmark-inc/logger"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/configuration"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/network"
 )
 
-// Node - node interface
+//Node - node interface
 type Node interface {
 	BroadcastReceiver() network.Client
 	CommandSenderAndReceiver() network.Client
@@ -20,17 +22,25 @@ type Node interface {
 	CloseConnection() error
 	DropRate()
 	Log() *logger.L
-	Monitor(shutdown <-chan struct{})
+	Monitor()
 	StopMonitor()
 	Verify()
 }
 
+type recorders struct {
+	heartbeat   recorder.Recorder
+	transaction recorder.Recorder
+}
+
 type node struct {
-	config     configuration.NodeConfig
-	client     Remote
-	id         int
-	log        *logger.L
-	checkTimer *time.Timer
+	checkTimer          *time.Timer
+	client              Remote
+	config              configuration.NodeConfig
+	heartbeatRecorder   recorder.Recorder
+	id                  int
+	log                 *logger.L
+	name                string
+	transactionRecorder recorder.Recorder
 }
 
 type nodeKeys struct {
@@ -40,19 +50,32 @@ type nodeKeys struct {
 }
 
 const (
-	receiveBroadcastIntervalInSecond = 120 * time.Second
-	checkIntervalSecond              = 10 * time.Second
+	checkIntervalSecond = 2 * time.Minute
 )
 
-// NewNode - create new node
-func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int) (intf Node, err error) {
-	log := logger.New(fmt.Sprintf("node-%d", idx))
+var (
+	shutdownChan <-chan struct{}
+	notifyChan   chan struct{}
+)
+
+//Initialise
+func Initialise(shutdown <-chan struct{}) {
+	shutdownChan = shutdown
+	notifyChan = make(chan struct{}, 1)
+	recorder.Initialise(shutdown)
+}
+
+//NewNode - create new node
+func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int, heartbeatIntervalSecond int) (intf Node, err error) {
+	log := logger.New(config.Name)
 
 	n := &node{
-		config:     config,
-		id:         idx,
-		log:        log,
-		checkTimer: time.NewTimer(checkIntervalSecond),
+		checkTimer:          time.NewTimer(checkIntervalSecond),
+		config:              config,
+		heartbeatRecorder:   recorder.NewHeartbeat(float64(heartbeatIntervalSecond), shutdownChan),
+		id:                  idx,
+		log:                 log,
+		transactionRecorder: recorder.NewTransaction(),
 	}
 
 	nodeKey, err := parseKeys(keys, config.PublicKey)
@@ -98,27 +121,27 @@ func parseKeys(keys configuration.Keys, remotePublicKeyStr string) (*nodeKeys, e
 	}, nil
 }
 
-// BroadcastReceiverClient - get zmq broadcast receiver remote
+//BroadcastReceiverClient - get zmq broadcast receiver remote
 func (n *node) BroadcastReceiver() network.Client {
 	return n.client.BroadcastReceiver()
 }
 
-// CommandSenderAndReceiver - network remote of command sender and receiver
+//CommandSenderAndReceiver - network remote of command sender and receiver
 func (n *node) CommandSenderAndReceiver() network.Client {
 	return n.client.CommandSenderAndReceiver()
 }
 
-// CheckTimer - get sender timer
+//CheckTimer - get sender timer
 func (n *node) CheckTimer() *time.Timer {
 	return n.checkTimer
 }
 
-// Remote - return remote interface
+//Remote - return remote interface
 func (n *node) Client() Remote {
 	return n.client
 }
 
-// CloseConnection - close connection
+//CloseConnection - close connection
 func (n *node) CloseConnection() error {
 	if err := n.client.Close(); nil != err {
 		return err
@@ -126,39 +149,40 @@ func (n *node) CloseConnection() error {
 	return nil
 }
 
-// DropRate - drop rate
+//DropRate - drop rate
 func (n *node) DropRate() {
 	return
 }
 
-// Log - get logger
+//Log - get logger
 func (n *node) Log() *logger.L {
 	return n.log
 }
 
-// Monitor - start to monitor
-func (n *node) Monitor(shutdownCh <-chan struct{}) {
-	go receiverLoop(n, shutdownCh, n.id)
-	n.checkTimer.Reset(checkIntervalSecond)
-	go checkerLoop(n, shutdownCh)
-
-loop:
-	select {
-	case <-shutdownCh:
-		break loop
+//Monitor - start to monitor
+func (n *node) Monitor() {
+	rs := recorders{
+		heartbeat:   n.heartbeatRecorder,
+		transaction: n.transactionRecorder,
 	}
+	go receiverLoop(n, rs, n.id)
+	go checkerLoop(n, rs)
+
+	n.checkTimer.Reset(checkIntervalSecond)
+	go senderLoop(n)
+
+	<-shutdownChan
 
 	n.Log().Info("stop")
-
 	return
 }
 
-// StopMonitor - stop monitor
+//StopMonitor - stop monitor
 func (n *node) StopMonitor() {
 	return
 }
 
-// Verify - verify record data
+//Verify - verify record data
 func (n *node) Verify() {
 	return
 }

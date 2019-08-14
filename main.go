@@ -29,22 +29,24 @@ func main() {
 		return
 	}
 
+	fmt.Printf("parse config...")
 	config, err := configuration.Parse(configFile)
 	if nil != err {
+		fmt.Printf("parse config with error: %s", err)
 		return
 	}
-
 	fmt.Printf("config: \n%s\n", config.String())
 
 	err = initializeLogger(config)
 	defer logger.Finalise()
 
-	log := logger.New("main")
-	defer log.Info("shutdown...")
-
 	if nil != err {
+		fmt.Printf("logger initialise with error: %s", err)
 		return
 	}
+
+	log := logger.New("main")
+	defer log.Info("shutdown...")
 
 	log.Info("auth zmq")
 
@@ -55,18 +57,17 @@ func main() {
 
 	log.Info("initialize nodes")
 
-	node, err := initializeNodes(config)
+	n, err := initializeNodes(config)
 	if nil != err {
 		return
 	}
-	defer node.StopMonitor()
 
-	node.Monitor()
+	n.Monitor()
 
 	ch := make(chan os.Signal)
-	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
-	sig := <-ch
-	log.Infof("receive signal: %v", sig)
+	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
+	<-ch
+	n.StopMonitor()
 	log.Flush()
 
 	return
@@ -108,7 +109,7 @@ func zmqAuth() error {
 }
 
 func initializeNodes(config configuration.Configuration) (nodes.Nodes, error) {
-	node, err := nodes.Initialise(config.NodesConfig(), config.Key())
+	node, err := nodes.Initialise(config.NodesConfig(), config.Key(), config.HeartbeatIntervalInSecond())
 	if nil != err {
 		return nil, err
 	}

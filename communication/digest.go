@@ -15,14 +15,19 @@ type digest struct {
 	prefix string
 }
 
+//DigestResponse - digest response
+type DigestResponse struct {
+	Digest blockdigest.Digest
+}
+
 func newDigest(client network.Client) Communication {
 	return &digest{
 		client: client,
-		prefix: "I",
+		prefix: "H",
 	}
 }
 
-// Get - get digest
+//Get - get digest
 func (d *digest) Get(args ...interface{}) (interface{}, error) {
 	if 1 < len(args) {
 		return nil, fault.InvalidArguments
@@ -49,9 +54,10 @@ func (d *digest) Get(args ...interface{}) (interface{}, error) {
 	if nil != err {
 		return nil, err
 	}
-	fmt.Printf("digest: %s\n", digest.String())
 
-	return &digest, nil
+	return &DigestResponse{
+		Digest: digest,
+	}, nil
 }
 
 func genPayload(height uint64) []byte {

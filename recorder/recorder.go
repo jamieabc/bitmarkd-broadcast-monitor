@@ -1,48 +1,31 @@
 package recorder
 
 import (
-	"sync"
 	"time"
 
-	"github.com/bitmark-inc/bitmarkd/blockdigest"
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/clock"
 )
 
-const (
-	recordSize = 90
-)
-
-// Recorder - recorder interface
+//Recorder - recorder interface
 type Recorder interface {
 	Add(time.Time, ...interface{})
+	RemoveOutdatedPeriodically(clock clock.Clock)
 	Summary() interface{}
 }
 
-type block struct {
-	height uint64
-	digest blockdigest.Digest
-}
+type expiredAt time.Time
+type receivedAt time.Time
 
-type records struct {
-	sync.Mutex
-	heartbeats              [recordSize]time.Time
-	blocks                  [recordSize]block
-	blockIdx                int
-	heartbeatIdx            int
-	heartbeatIntervalSecond float64
-	highestBlock            uint64
-}
+const (
+	expiredTimeInterval = 2 * time.Hour
+)
 
-func nextID(idx int) int {
-	if recordSize-1 == idx {
-		return 0
-	} else {
-		return idx + 1
-	}
-}
+var (
+	overallEarliestTime time.Time
+)
 
-func prevID(currentID int) int {
-	if 0 == currentID {
-		return recordSize - 1
-	}
-	return currentID - 1
+//Initialise
+func Initialise(shutdown <-chan struct{}) {
+	initialiseTransactions(shutdown)
+	overallEarliestTime = time.Now()
 }

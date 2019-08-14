@@ -5,83 +5,169 @@ import (
 	"math"
 	"sync"
 	"time"
+
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/clock"
 )
 
 type heartbeat struct {
 	sync.Mutex
-	data           [recordSize]time.Time
-	nextItemID     int
-	intervalSecond float64
+	data         map[receivedAt]expiredAt
+	nextItemID   int
+	received     bool
+	shutdownChan <-chan struct{}
 }
 
-// HeartbeatSummary - summary of heartbeat data
+//HeartbeatSummary - summary of heartbeat data
 type HeartbeatSummary struct {
 	Duration      time.Duration
 	ReceivedCount uint16
+	received      bool
 	Droprate      float64
 }
 
-// Add - add received heartbeat record
-func (h *heartbeat) Add(t time.Time, v ...interface{}) {
-	h.Lock()
-	defer h.Unlock()
+var (
+	fullCycleReceivedCount float64
+	intervalSecond         float64
+)
 
-	h.data[h.nextItemID] = t
-	h.nextItemID = nextID(h.nextItemID)
+func (h *HeartbeatSummary) String() string {
+	if !h.received {
+		return neverReceive(h)
+	}
+
+	if h.received && 0 == h.ReceivedCount {
+		return notReceivingForTwoHours(h)
+	}
+
+	dropPercent := math.Floor(h.Droprate*10000) / 100
+	return fmt.Sprintf("earliest received time to now takes %s, received: %d, drop percent: %f%%", h.Duration, h.ReceivedCount, dropPercent)
 }
 
-// Summary -summarize heartbeat data
+func neverReceive(h *HeartbeatSummary) string {
+	expectedCount := math.Floor(h.Duration.Seconds() / intervalSecond)
+	return fmt.Sprintf("not receiving heartbeat for %s, expected received %d", h.Duration, int(expectedCount))
+}
+
+func notReceivingForTwoHours(h *HeartbeatSummary) string {
+	expectedCount := int(math.Floor(h.Duration.Seconds() / intervalSecond))
+	return fmt.Sprintf("not receiving heartbeat for more than 2 hours, expected receive count: %d, dorp percent: 100%%", expectedCount)
+}
+
+//Add - add received heartbeat record
+func (h *heartbeat) Add(t time.Time, args ...interface{}) {
+	if !h.received {
+		h.received = true
+	}
+
+	h.Lock()
+	h.data[receivedAt(t)] = expiredAt(t.Add(expiredTimeInterval))
+	h.Unlock()
+}
+
+//RemoveOutdatedPeriodically - clean expired heartbeat record periodically
+func (h *heartbeat) RemoveOutdatedPeriodically(c clock.Clock) {
+	timer := c.After(expiredTimeInterval)
+loop:
+	for {
+		select {
+		case <-h.shutdownChan:
+			break loop
+		case <-timer:
+			cleanupExpiredHeartbeat(h)
+			timer = c.After(time.Duration(intervalSecond) * time.Second)
+		}
+	}
+}
+
+func cleanupExpiredHeartbeat(h *heartbeat) {
+	now := time.Now()
+
+	h.Lock()
+
+	for k, v := range h.data {
+		if now.After(time.Time(v)) {
+			delete(h.data, k)
+		}
+	}
+
+	h.Unlock()
+}
+
+//Summary - summarize heartbeat data
 func (h *heartbeat) Summary() interface{} {
 	h.Lock()
-	defer h.Unlock()
 
-	min := h.data[0]
-	count := uint16(0)
+	count := uint16(len(h.data))
+	duration, earliest := durationFromEarliestReceive(h)
+	updateOverallEarliestTime(earliest)
 
-	for i := 0; i < recordSize; i++ {
-		if (time.Time{}) != h.data[i] {
-			count++
-			if h.data[i].Before(min) {
-				min = h.data[i]
-			}
-		} else {
-			break
-		}
-	}
-
-	latestReceiveTime := h.data[prevID(h.nextItemID)]
-
-	if (time.Time{}) == min || latestReceiveTime.Before(min) {
-		return &HeartbeatSummary{
-			Duration:      0,
-			ReceivedCount: count,
-			Droprate:      0,
-		}
-	}
-
-	duration := latestReceiveTime.Sub(min)
+	h.Unlock()
 
 	return &HeartbeatSummary{
 		Duration:      duration,
 		ReceivedCount: count,
-		Droprate:      h.droprate(duration, count),
+		received:      h.received,
+		Droprate:      h.droprate(count, duration),
+	}
+
+}
+
+func updateOverallEarliestTime(earliest time.Time) {
+	if earliest.Before(overallEarliestTime) {
+		overallEarliestTime = earliest
 	}
 }
 
-func (h *heartbeat) droprate(duration time.Duration, actualReceived uint16) float64 {
-	expectedCount := math.Floor(duration.Seconds()/h.intervalSecond) + 1
-	fmt.Printf("expectedCount: %f\n", expectedCount)
-	fmt.Printf("actual recunt: %d\n", actualReceived)
-	if 0 == expectedCount {
+func durationFromEarliestReceive(h *heartbeat) (time.Duration, time.Time) {
+	earliest := overallEarliestTime
+	latest := time.Time{}
+	for k := range h.data {
+		if earliest.After(time.Time(k)) {
+			earliest = time.Time(k)
+		}
+		if latest.Before(time.Time(k)) {
+			latest = time.Time(k)
+		}
+	}
+	actualLatest := h.chooseClosestLatestReceiveTime(latest)
+	return actualLatest.Sub(earliest), earliest
+}
+
+func (h *heartbeat) chooseClosestLatestReceiveTime(latestReceivedTime time.Time) time.Time {
+	now := time.Now()
+	if now.Sub(latestReceivedTime).Seconds() >= intervalSecond {
+		return now
+	}
+	return latestReceivedTime
+}
+
+func (h *heartbeat) droprate(actualReceived uint16, duration time.Duration) float64 {
+	if 0 == actualReceived {
+		return float64(0)
+	}
+	expectedReceivedCount := fullCycleReceivedCount
+	if duration < expiredTimeInterval {
+		expectedReceivedCount = math.Floor(duration.Seconds() / intervalSecond)
+	}
+
+	//in case heartbeat time just arrive after monitor start, causes +1 count and make drop percent < 0
+	if 0 == expectedReceivedCount || float64(actualReceived) >= expectedReceivedCount {
 		return float64(0)
 	}
 
-	return (expectedCount - float64(actualReceived)) * 100 / expectedCount
+	result := (expectedReceivedCount - float64(actualReceived)) / expectedReceivedCount
+	return result
 }
 
-// NewHeartbeat - new heartbeat
-func NewHeartbeat(intervalSecond float64) Recorder {
-	return &heartbeat{
-		intervalSecond: intervalSecond,
+//NewHeartbeat - new heartbeat
+func NewHeartbeat(interval float64, shutdownChan <-chan struct{}) Recorder {
+	h := &heartbeat{
+		data:         make(map[receivedAt]expiredAt),
+		shutdownChan: shutdownChan,
 	}
+	fullCycleReceivedCount = math.Floor(expiredTimeInterval.Seconds() / interval)
+	intervalSecond = interval
+	c := clock.NewClock()
+	go h.RemoveOutdatedPeriodically(c)
+	return h
 }

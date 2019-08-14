@@ -1,36 +1,50 @@
 package node
 
 import (
+	"encoding/hex"
+	"fmt"
+	"time"
+
+	"github.com/bitmark-inc/bitmarkd/blockrecord"
+
 	"github.com/bitmark-inc/bitmarkd/chain"
 	"github.com/bitmark-inc/bitmarkd/merkle"
 	"github.com/bitmark-inc/bitmarkd/transactionrecord"
 	"github.com/bitmark-inc/logger"
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/clock"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/network"
 	zmq "github.com/pebbe/zmq4"
 )
 
 const (
-	assetCategoryStr    = "assetCategoryStr"
-	issueCategoryStr    = "issueCategoryStr"
-	transferCategoryStr = "transferCategoryStr"
+	assetCmdStr                      = "assets"
+	issueCmdStr                      = "issues"
+	transferCmdStr                   = "transfer"
+	blockCmdStr                      = "block"
+	heartbeatCmdStr                  = "heart"
+	receiveBroadcastIntervalInSecond = 120 * time.Second
 )
 
-func receiverLoop(n Node, shutdownCh <-chan struct{}, id int) {
-	eventChannel := make(chan zmq.Polled, 10)
+func receiverLoop(n Node, rs recorders, id int) {
+	eventChannel := make(chan zmq.Polled, 100)
 	log := n.Log()
 
-	poller, err := network.NewPoller(eventChannel, shutdownCh, id)
+	poller, err := network.NewPoller(eventChannel, shutdownChan, id)
 	if nil != err {
 		log.Errorf("create poller with error: %s", err)
 		return
 	}
 	poller.Add(n.BroadcastReceiver(), zmq.POLLIN)
+	timer := clock.NewClock()
+	checkTimer := time.After(30 * time.Second)
+	checked := false
+
+	go rs.heartbeat.RemoveOutdatedPeriodically(timer)
+	go rs.transaction.RemoveOutdatedPeriodically(timer)
 
 	go func() {
 		for {
 			_ = poller.Start(receiveBroadcastIntervalInSecond)
-			log.Debug("waiting broadcast...")
-
 			select {
 			case polled := <-eventChannel:
 				data, err := polled.Socket.RecvMessageBytes(0)
@@ -38,14 +52,18 @@ func receiverLoop(n Node, shutdownCh <-chan struct{}, id int) {
 					log.Errorf("receive error: %s", err)
 					continue
 				}
-				process(n, data)
-			case <-shutdownCh:
+				process(n, rs, data, &checked)
+			case <-shutdownChan:
+				log.Infof("terminate receiver loop")
 				return
+			case <-checkTimer:
+				checked = false
+				checkTimer = time.After(30 * time.Second)
 			}
 		}
 	}()
 
-	<-shutdownCh
+	<-shutdownChan
 
 	if err := n.CloseConnection(); nil != err {
 		log.Errorf("close connection with error: %s", err)
@@ -55,43 +73,55 @@ func receiverLoop(n Node, shutdownCh <-chan struct{}, id int) {
 	return
 }
 
-func process(n Node, data [][]byte) {
+func process(n Node, rs recorders, data [][]byte, checked *bool) {
 	log := n.Log()
 	blockchain := string(data[0])
 	if !chain.Valid(blockchain) {
 		log.Errorf("invalid chain: %s", blockchain)
 		return
 	}
+	now := time.Now()
 
 	switch category := string(data[1]); category {
-	case assetCategoryStr, issueCategoryStr, transferCategoryStr:
-		trx := data[2]
+	case blockCmdStr:
+		header, digest, _, err := blockrecord.ExtractHeader(data[2])
+		if nil != err {
+			log.Errorf("extract block header with error: %s", err)
+			return
+		}
+		log.Infof("receive block, number: %d, digest: %s", header.Number, digest)
 
-		log.Infof("receive %s record", category)
-		log.Debugf("transactions: %x", trx)
+	case assetCmdStr, issueCmdStr, transferCmdStr:
+		bytes := data[2]
 
-		txID, err := transactionID(trx, blockchain, log)
+		log.Debugf("raw %s data: %s", category, hex.EncodeToString(bytes))
+		id, err := extractID(bytes, blockchain, log)
 		if nil != err {
 			return
 		}
-		log.Infof("transaction ID: %s", txID)
+		log.Infof("receive %s ID %s", category, []byte(fmt.Sprintf("%v", id)))
+		rs.transaction.Add(now, id)
+		if !*checked {
+			*checked = true
+			notifyChan <- struct{}{}
+		}
 
-	case "heart":
+	case heartbeatCmdStr:
 		log.Infof("receive heartbeat")
+		rs.heartbeat.Add(now)
 
 	default:
-		log.Infof("receive %s", category)
+		log.Debugf("receive %s", category)
 	}
 }
 
-func transactionID(trx []byte, chain string, log *logger.L) (merkle.Digest, error) {
-	_, n, err := transactionrecord.Packed(trx).Unpack(isTestnet(chain))
+func extractID(bytes []byte, chain string, log *logger.L) (merkle.Digest, error) {
+	_, n, err := transactionrecord.Packed(bytes).Unpack(isTestnet(chain))
 	if nil != err {
 		log.Errorf("unpack transaction with error: %s", err)
 		return merkle.Digest{}, err
 	}
-	txID := transactionrecord.Packed(trx[:n]).MakeLink()
-	return txID, nil
+	return transactionrecord.Packed(bytes[:n]).MakeLink(), nil
 }
 
 func isTestnet(category string) bool {

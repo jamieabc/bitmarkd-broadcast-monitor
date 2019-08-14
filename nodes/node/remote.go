@@ -3,20 +3,20 @@ package node
 import (
 	"fmt"
 
-	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/communication"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/configuration"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/network"
 	zmq "github.com/pebbe/zmq4"
 )
 
-// Remote - remote interface
+//Remote - remote interface
 type Remote interface {
 	BroadcastReceiver() network.Client
 	Close() error
 	CommandSenderAndReceiver() network.Client
-	DigestOfHeight(height uint64) (*blockdigest.Digest, error)
+	DigestOfHeight(height uint64) (*communication.DigestResponse, error)
 	Info() (*communication.InfoResponse, error)
+	Height() (*communication.HeightResponse, error)
 }
 
 type remote struct {
@@ -91,62 +91,72 @@ func hostAndPort(host string, port string) string {
 	return fmt.Sprintf("%s:%s", host, port)
 }
 
-// BroadcastReceiver - zmq remote of broadcast receiver
-func (c *remote) BroadcastReceiver() network.Client {
-	return c.broadcastReceiver
+//BroadcastReceiver - zmq remote of broadcast receiver
+func (r *remote) BroadcastReceiver() network.Client {
+	return r.broadcastReceiver
 }
 
-// Close - close remote
-func (c *remote) Close() error {
-	if err := c.closeBroadcastReceiver(); nil != err {
+//Close - close remote
+func (r *remote) Close() error {
+	if err := r.closeBroadcastReceiver(); nil != err {
 		return err
 	}
-	if err := c.closeCommandSenderAndReceiver(); nil != err {
+	if err := r.closeCommandSenderAndReceiver(); nil != err {
 		return err
 	}
 	return nil
 }
 
-func (c *remote) closeBroadcastReceiver() error {
-	if nil != c.broadcastReceiver {
-		if err := c.broadcastReceiver.Close(); nil != err {
+func (r *remote) closeBroadcastReceiver() error {
+	if nil != r.broadcastReceiver {
+		if err := r.broadcastReceiver.Close(); nil != err {
 			return err
 		}
 	}
 	return nil
 }
 
-func (c *remote) closeCommandSenderAndReceiver() error {
-	if nil != c.commandSenderAndReceiver {
-		if err := c.commandSenderAndReceiver.Close(); nil != err {
+func (r *remote) closeCommandSenderAndReceiver() error {
+	if nil != r.commandSenderAndReceiver {
+		if err := r.commandSenderAndReceiver.Close(); nil != err {
 			return err
 		}
 	}
 	return nil
 }
 
-// CommandSenderAndReceiver - zmq remote of command sender and receiver
-func (c *remote) CommandSenderAndReceiver() network.Client {
-	return c.commandSenderAndReceiver
+//CommandSenderAndReceiver - zmq remote of command sender and receiver
+func (r *remote) CommandSenderAndReceiver() network.Client {
+	return r.commandSenderAndReceiver
 }
 
-// DigestOfHeight - digest of block height
-func (c *remote) DigestOfHeight(height uint64) (*blockdigest.Digest, error) {
-	comm := communication.New(communication.ComDigest, c.commandSenderAndReceiver)
+//DigestOfHeight - digest of block height
+func (r *remote) DigestOfHeight(height uint64) (*communication.DigestResponse, error) {
+	comm := communication.New(communication.ComDigest, r.commandSenderAndReceiver)
 	reply, err := comm.Get(height)
 	if nil != err {
 		return nil, err
 	}
-	return reply.(*blockdigest.Digest), nil
+	return reply.(*communication.DigestResponse), nil
 }
 
-// Info - remote remote info
-func (c *remote) Info() (*communication.InfoResponse, error) {
-	comm := communication.New(communication.ComInfo, c.commandSenderAndReceiver)
+//Info - remote info
+func (r *remote) Info() (*communication.InfoResponse, error) {
+	comm := communication.New(communication.ComInfo, r.commandSenderAndReceiver)
 	reply, err := comm.Get()
 	if nil != err {
 		return nil, err
 	}
 
 	return reply.(*communication.InfoResponse), nil
+}
+
+//Height - remote height
+func (r *remote) Height() (*communication.HeightResponse, error) {
+	comm := communication.New(communication.ComHeight, r.commandSenderAndReceiver)
+	reply, err := comm.Get()
+	if nil != err {
+		return nil, err
+	}
+	return reply.(*communication.HeightResponse), nil
 }

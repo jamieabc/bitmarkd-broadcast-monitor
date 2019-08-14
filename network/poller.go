@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bitmark-inc/logger"
+
 	zmq "github.com/pebbe/zmq4"
 )
 
@@ -62,7 +64,6 @@ func (p *poller) Add(client Client, events zmq.State) {
 	// preserve the event mask
 	p.sockets[socket] = events
 
-	fmt.Printf("add socket to internal")
 	// add to the internal p
 	p.poll.Add(socket, events)
 }
@@ -100,6 +101,7 @@ loop:
 	for _, zmqEvent := range polled {
 		switch zmqEvent.Socket {
 		case p.signalPair.Receiver():
+			logger.Critical("receive internal signal pair, terminate")
 			break loop
 		default:
 			p.eventChan <- zmqEvent

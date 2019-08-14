@@ -12,12 +12,16 @@ type info struct {
 	prefix string
 }
 
-// InfoResponse - info response
+//InfoResponse - info response
 type InfoResponse struct {
 	Version string `json:"version"`
 	Chain   string `json:"chain"`
 	Normal  bool   `json:"normal"`
 	Height  uint64 `json:"height"`
+}
+
+func (i *InfoResponse) String() string {
+	return fmt.Sprintf("version %s, chain %s, height %d, normal %t", i.Version, i.Chain, i.Height, i.Normal)
 }
 
 func newInfo(client network.Client) Communication {
@@ -27,7 +31,7 @@ func newInfo(client network.Client) Communication {
 	}
 }
 
-// Get - get info
+//Get - get info
 func (i *info) Get(payload ...interface{}) (interface{}, error) {
 	err := i.client.Send(i.prefix)
 	if nil != err {
@@ -48,7 +52,6 @@ func (i *info) Get(payload ...interface{}) (interface{}, error) {
 	if nil != err {
 		return nil, err
 	}
-	fmt.Printf("info: %+v\n", info)
 
 	return &info, nil
 }
