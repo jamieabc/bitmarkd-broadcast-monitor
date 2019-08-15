@@ -46,4 +46,12 @@ M.logging = {
 
 M.heartbeat_interval_second = 60
 
+M.influxdb = {
+   ipv4 = "1.2.3.4",
+   port = "5678",
+   user = "user",
+   password = "password",
+   database = "database",
+}
+
 return M
