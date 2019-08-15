@@ -12,6 +12,7 @@ import (
 type Configuration interface {
 	Data() *configuration
 	HeartbeatIntervalInSecond() int
+	Influx() InfluxDBConfig
 	Key() Keys
 	LogConfig() logger.Configuration
 	NodesConfig() []NodeConfig
@@ -23,6 +24,7 @@ type configuration struct {
 	Keys                    Keys                 `gluamapper:"keys"`
 	Logging                 logger.Configuration `gluamapper:"logging"`
 	HeartbeatIntervalSecond int                  `gluamapper:"heartbeat_interval_second"`
+	InfluxDB                InfluxDBConfig       `gluamapper:"influxdb"`
 }
 
 //NodeConfig - node config
@@ -33,6 +35,15 @@ type NodeConfig struct {
 	Chain         string `gluamapper:"chain"`
 	Name          string `gluamapper:"name"`
 	PublicKey     string `gluamapper:"public_key"`
+}
+
+//InfluxDBConfig - influxdb config
+type InfluxDBConfig struct {
+	Database string `gluamapper:"database"`
+	IPv4     string `gluamapper:"ipv4"`
+	Port     string `gluamapper:"port"`
+	User     string `gluamapper:"user"`
+	Password string `gluamapper:"password"`
 }
 
 //Keys - public and private keys
@@ -113,6 +124,12 @@ func (c *configuration) String() string {
 	}
 	str.WriteString(fmt.Sprintf("heartbeat interval: %d seconds\n", c.HeartbeatIntervalSecond))
 	str.WriteString(fmt.Sprintf("logging: %+v\n", c.Logging))
+	str.WriteString("influx database:")
+	str.WriteString(fmt.Sprintf("\tip:\t%s\n\tport:\t%s\n\tuser:\t%s\n\tpassword:\t%s\n",
+		c.InfluxDB.IPv4,
+		c.InfluxDB.Port,
+		c.InfluxDB.User,
+		c.InfluxDB.Password))
 	return str.String()
 }
 
@@ -124,4 +141,9 @@ func (c *configuration) Key() Keys {
 //HeartbeatIntervalInSecond - heartbeat interval in second
 func (c *configuration) HeartbeatIntervalInSecond() int {
 	return c.HeartbeatIntervalSecond
+}
+
+//Influx - return influx config
+func (c *configuration) Influx() InfluxDBConfig {
+	return c.InfluxDB
 }

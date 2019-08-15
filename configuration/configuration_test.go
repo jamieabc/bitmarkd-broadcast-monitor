@@ -53,6 +53,15 @@ M.logging = {
 }
 
 M.heartbeat_interval_second = 60
+
+M.influxdb = {
+   ipv4 = "1.2.3.4",
+   port = "5678",
+   user = "user",
+   password = "password",
+   database = "database",
+}
+
 return M
 `)
 
@@ -100,10 +109,19 @@ func TestParse(t *testing.T) {
 		Private: "2222",
 	}
 
+	influxdb := configuration.InfluxDBConfig{
+		IPv4:     "1.2.3.4",
+		Port:     "5678",
+		User:     "user",
+		Password: "password",
+		Database: "database",
+	}
+
 	assert.Equal(t, keys, actual.Keys, "wrong key")
 	assert.Equal(t, 2, len(actual.Nodes), "wrong nodes")
 	assert.Equal(t, node1, actual.Nodes[0], "different node info")
 	assert.Equal(t, node2, actual.Nodes[1], "different node info")
+	assert.Equal(t, influxdb, actual.InfluxDB, "different influxdb")
 }
 
 func TestString(t *testing.T) {
@@ -127,6 +145,8 @@ func TestString(t *testing.T) {
 	assert.Contains(t, actual, "testing", "wrong node 2 chain")
 	assert.Contains(t, actual, "60", "wrong heartbeat interval")
 	assert.Contains(t, actual, "name1", "wrong name")
+	assert.Contains(t, actual, "user", "wrong influx user")
+	assert.Contains(t, actual, "password", "wrong influx password")
 }
 
 func TestLogging(t *testing.T) {
@@ -203,4 +223,21 @@ func TestHeartbeatIntervalInSecond(t *testing.T) {
 	heartbeatInterval := config.HeartbeatIntervalInSecond()
 
 	assert.Equal(t, 60, heartbeatInterval, "wrong heartbeat interval")
+}
+
+func TestInfluxDB(t *testing.T) {
+	setupConfigurationTestFile()
+	defer teardownTestFile()
+
+	config, _ := configuration.Parse(testFile)
+	influxdb := config.Influx()
+	expected := configuration.InfluxDBConfig{
+		IPv4:     "1.2.3.4",
+		Port:     "5678",
+		User:     "user",
+		Password: "password",
+		Database: "database",
+	}
+
+	assert.Equal(t, expected, influxdb, "wrong influxdb")
 }
