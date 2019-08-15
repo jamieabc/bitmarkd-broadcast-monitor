@@ -34,8 +34,12 @@ func (i *influx) Tags(tags map[string]string) {
 }
 
 //Write - write to influx db, not thread safe
-func (i *influx) Write(measurement []byte) (int, error) {
-	defer i.Close()
+func (i *influx) Write(measurement []byte) (n int, err error) {
+	n = 0
+	defer func() {
+		err = i.Close()
+		return
+	}()
 
 	bp, err := dbClient.NewBatchPoints(dbClient.BatchPointsConfig{
 		Precision:        "",
@@ -45,21 +49,22 @@ func (i *influx) Write(measurement []byte) (int, error) {
 	})
 
 	if nil != err {
-		return 0, err
+		return
 	}
 
 	pt, err := dbClient.NewPoint(string(measurement), i.tags, i.fields, time.Now())
 	if nil != err {
-		return 0, err
+		return
 	}
 
 	bp.AddPoint(pt)
 
 	if err := i.client.Write(bp); nil != err {
-		return 0, err
+		return
 	}
 
-	return 1, nil
+	n = 1
+	return
 }
 
 //NewInfluxDBWriter - create influx dbClient writer
