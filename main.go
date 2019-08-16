@@ -58,17 +58,17 @@ func main() {
 		return
 	}
 
-	log.Info("initialize db")
-	err = db.Initialize(config.Influx(), logger.New("influxdb"))
+	log.Info("initialise db")
+	err = db.Initialise(config.Influx(), logger.New("influxdb"))
 	if nil != err {
 		log.Errorf("initialise db with error: %s", err)
 		return
 	}
 
-	log.Info("initialize nodes")
-	n, err := initializeNodes(config)
+	log.Info("initialise nodes")
+	n, err := initialiseNodes(config)
 	if nil != err {
-		log.Errorf("initialize nodes with error: %s", err)
+		log.Errorf("initialise nodes with error: %s", err)
 		return
 	}
 
@@ -119,7 +119,7 @@ func zmqAuth() error {
 	return nil
 }
 
-func initializeNodes(config configuration.Configuration) (nodes.Nodes, error) {
+func initialiseNodes(config configuration.Configuration) (nodes.Nodes, error) {
 	node, err := nodes.Initialise(config.NodesConfig(), config.Key(), config.HeartbeatIntervalInSecond())
 	if nil != err {
 		return nil, err

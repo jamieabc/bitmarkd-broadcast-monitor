@@ -24,7 +24,7 @@ type nodes struct {
 	shutdownChan chan struct{}
 }
 
-//Initialize - initialise objects
+//Initialise - initialise objects
 func Initialise(configs []configuration.NodeConfig, keys configuration.Keys, heartbeatIntervalSecond int) (Nodes, error) {
 	var ns []node.Node
 	log := logger.New("nodes")

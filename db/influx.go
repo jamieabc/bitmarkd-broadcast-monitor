@@ -120,9 +120,9 @@ func (i *Influx) write() (err error) {
 	return
 }
 
-//Initialize - initialize package
-func Initialize(config configuration.InfluxDBConfig, log *logger.L) error {
-	ptr, err := initialize(config, log)
+//Initialise - initialise package
+func Initialise(config configuration.InfluxDBConfig, log *logger.L) error {
+	ptr, err := initialise(config, log)
 	if nil != err {
 		return err
 	}
@@ -130,7 +130,7 @@ func Initialize(config configuration.InfluxDBConfig, log *logger.L) error {
 	return err
 }
 
-func initialize(config configuration.InfluxDBConfig, log *logger.L) (*Influx, error) {
+func initialise(config configuration.InfluxDBConfig, log *logger.L) (*Influx, error) {
 	c, err := dbClient.NewHTTPClient(dbClient.HTTPConfig{
 		Addr:               connection(config.IPv4, config.Port),
 		Username:           config.User,
@@ -163,7 +163,7 @@ func connection(addr string, port string) string {
 
 //NewInfluxDBWriter - create Influx dbClient writer
 func NewInfluxDBWriter(config configuration.InfluxDBConfig, log *logger.L) (DBWriter, error) {
-	return initialize(config, log)
+	return initialise(config, log)
 }
 
 //Add - set Fields and Tags

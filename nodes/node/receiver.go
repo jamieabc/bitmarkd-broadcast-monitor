@@ -54,9 +54,9 @@ func receiverRoutine(n Node, rs recorders, id int) {
 	heartbeatTimer := time.After(heartbeatTimeoutSecond)
 	checked := false
 
-	poller, err := initializePoller(n, id, eventChan)
+	poller, err := initialisePoller(n, id, eventChan)
 	if nil != err {
-		log.Errorf("initialize poller with error: %s", err)
+		log.Errorf("initialise poller with error: %s", err)
 		return
 	}
 
@@ -92,7 +92,7 @@ func receiverRoutine(n Node, rs recorders, id int) {
 	}
 }
 
-func initializePoller(n Node, id int, eventChan chan zmq.Polled) (network.Poller, error) {
+func initialisePoller(n Node, id int, eventChan chan zmq.Polled) (network.Poller, error) {
 	poller, err := network.NewPoller(eventChan, shutdownChan, id)
 	if nil != err {
 		return nil, err
