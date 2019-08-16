@@ -5,10 +5,11 @@
 package mocks
 
 import (
-	gomock "github.com/golang/mock/gomock"
-	models "github.com/influxdata/influxdb1-client/models"
 	reflect "reflect"
 	time "time"
+
+	gomock "github.com/golang/mock/gomock"
+	models "github.com/influxdata/influxdb1-client/models"
 )
 
 // MockPoint is a mock of Point interface
@@ -74,19 +75,19 @@ func (mr *MockPointMockRecorder) FieldIterator() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FieldIterator", reflect.TypeOf((*MockPoint)(nil).FieldIterator))
 }
 
-// Fields mocks base method
+// Add mocks base method
 func (m *MockPoint) Fields() (models.Fields, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Fields")
+	ret := m.ctrl.Call(m, "Add")
 	ret0, _ := ret[0].(models.Fields)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Fields indicates an expected call of Fields
+// Add indicates an expected call of Add
 func (mr *MockPointMockRecorder) Fields() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Fields", reflect.TypeOf((*MockPoint)(nil).Fields))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockPoint)(nil).Fields))
 }
 
 // ForEachTag mocks base method

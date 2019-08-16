@@ -1,16 +1,24 @@
 package db
 
-import "io"
+import (
+	"io"
+	"sync"
+)
 
 //DBWriter - db interface
 type DBWriter interface {
-	io.Writer
+	Adder
 	io.Closer
-	Setter
+	Looper
+	sync.Locker
 }
 
-//Setter - set data to write
-type Setter interface {
-	Fields(map[string]interface{})
-	Tags(map[string]string)
+//Adder - set Data to write
+type Adder interface {
+	Add(InfluxData)
+}
+
+//Looper - loop to periodic write
+type Looper interface {
+	Loop(chan struct{})
 }

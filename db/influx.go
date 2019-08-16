@@ -1,6 +1,8 @@
 package db
 
 import (
+	"fmt"
+	"sync"
 	"time"
 
 	_ "github.com/influxdata/influxdb1-client"
@@ -8,66 +10,98 @@ import (
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/configuration"
 )
 
-type influx struct {
-	client   dbClient.Client
-	database string
-	tags     map[string]string
-	fields   map[string]interface{}
+const (
+	dataSize             = 100
+	looperIntervalSecond = 10 * time.Second
+)
+
+//InfluxData - data write to influx db
+type InfluxData struct {
+	Fields      map[string]interface{}
+	Measurement string
+	Tags        map[string]string
+	Timing      time.Time
 }
 
-//Close - close influx db connection
-func (i *influx) Close() error {
-	if err := i.client.Close(); nil != err {
+//Influx - influx db Data structure
+type Influx struct {
+	sync.Mutex
+	Client   dbClient.Client
+	Database string
+	Data     []InfluxData
+}
+
+//Close - close Influx db connection
+func (i *Influx) Close() error {
+	if err := i.Client.Close(); nil != err {
 		return err
 	}
 	return nil
 }
 
-//Fields - set fields, not thread safe
-func (i *influx) Fields(fields map[string]interface{}) {
-	i.fields = fields
+//Add - set Fields and Tags
+func (i *Influx) Add(data InfluxData) {
+	i.Lock()
+	i.Data = append(i.Data, data)
+	i.Unlock()
 }
 
-//Tags - set tags, not thread safe
-func (i *influx) Tags(tags map[string]string) {
-	i.tags = tags
+//Loop - background loop
+func (i *Influx) Loop(shutdownChan chan struct{}) {
+	timer := time.After(looperIntervalSecond)
+	for {
+		select {
+		case <-shutdownChan:
+			return
+		case <-timer:
+			err := i.write()
+			if nil != err {
+				fmt.Printf("write to Influx db with error: %s", err)
+			}
+			timer = time.After(looperIntervalSecond)
+		}
+	}
 }
 
-//Write - write to influx db, not thread safe
-func (i *influx) Write(measurement []byte) (n int, err error) {
-	n = 0
+func (i *Influx) write() (err error) {
 	defer func() {
 		err = i.Close()
 		return
 	}()
 
 	bp, err := dbClient.NewBatchPoints(dbClient.BatchPointsConfig{
-		Precision:        "",
-		Database:         i.database,
-		RetentionPolicy:  "",
-		WriteConsistency: "",
+		Database: i.Database,
 	})
 
 	if nil != err {
 		return
 	}
 
-	pt, err := dbClient.NewPoint(string(measurement), i.tags, i.fields, time.Now())
-	if nil != err {
+	points := make([]InfluxData, len(i.Data))
+
+	i.Lock()
+	copy(points, i.Data[:])
+	i.Data = i.Data[:0]
+	i.Unlock()
+
+	var pt *dbClient.Point
+	for _, d := range points {
+		pt, err = dbClient.NewPoint(d.Measurement, d.Tags, d.Fields, d.Timing)
+		if nil != err {
+			return
+		}
+
+		bp.AddPoint(pt)
+	}
+
+	if err = i.Client.Write(bp); nil != err {
 		return
 	}
 
-	bp.AddPoint(pt)
-
-	if err := i.client.Write(bp); nil != err {
-		return
-	}
-
-	n = 1
 	return
 }
 
-//NewInfluxDBWriter - create influx dbClient writer
+//NewInfluxDBWriter - create Influx dbClient writer
 func NewInfluxDBWriter(config configuration.InfluxDBConfig) (DBWriter, error) {
 	c, err := dbClient.NewHTTPClient(dbClient.HTTPConfig{
 		Addr:               config.IPv4,
@@ -84,8 +118,9 @@ func NewInfluxDBWriter(config configuration.InfluxDBConfig) (DBWriter, error) {
 		return nil, err
 	}
 
-	return &influx{
-		client:   c,
-		database: config.Database,
+	return &Influx{
+		Client:   c,
+		Database: config.Database,
+		Data:     make([]InfluxData, dataSize),
 	}, nil
 }
