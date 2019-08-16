@@ -16,6 +16,8 @@ const (
 	looperIntervalSecond = 5 * time.Second
 )
 
+var internalData Influx
+
 //InfluxData - data write to influx db
 type InfluxData struct {
 	Fields      map[string]interface{}
@@ -109,8 +111,17 @@ func (i *Influx) write() (err error) {
 	return
 }
 
-//NewInfluxDBWriter - create Influx dbClient writer
-func NewInfluxDBWriter(config configuration.InfluxDBConfig, log *logger.L) (DBWriter, error) {
+//Initialise - initialise package
+func Initialise(config configuration.InfluxDBConfig, log *logger.L) error {
+	ptr, err := initialise(config, log)
+	if nil != err {
+		return err
+	}
+	internalData = *ptr
+	return err
+}
+
+func initialise(config configuration.InfluxDBConfig, log *logger.L) (*Influx, error) {
 	c, err := dbClient.NewHTTPClient(dbClient.HTTPConfig{
 		Addr:               config.IPv4,
 		Username:           config.User,
@@ -132,4 +143,34 @@ func NewInfluxDBWriter(config configuration.InfluxDBConfig, log *logger.L) (DBWr
 		Data:     make([]InfluxData, dataSize),
 		Log:      log,
 	}, nil
+}
+
+//NewInfluxDBWriter - create Influx dbClient writer
+func NewInfluxDBWriter(config configuration.InfluxDBConfig, log *logger.L) (DBWriter, error) {
+	return initialise(config, log)
+}
+
+//Add - set Fields and Tags
+func Add(data InfluxData) {
+	internalData.Lock()
+	internalData.Data = append(internalData.Data, data)
+	internalData.Unlock()
+}
+
+//Start - start background loop
+func Start(shutdownChan chan struct{}) {
+	timer := time.After(looperIntervalSecond)
+	for {
+		select {
+		case <-shutdownChan:
+			_ = internalData.Close()
+			return
+		case <-timer:
+			err := internalData.write()
+			if nil != err {
+				internalData.Log.Errorf("write to influx db with error: %s", err)
+			}
+			timer = time.After(looperIntervalSecond)
+		}
+	}
 }
