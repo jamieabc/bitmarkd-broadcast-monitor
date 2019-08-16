@@ -86,4 +86,6 @@ func TestLoop(t *testing.T) {
 	<-timer
 
 	shutdownChan <- struct{}{}
+
+	assert.Equal(t, 0, len(i.Data), "not cleanup after write to db")
 }
