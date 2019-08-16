@@ -24,13 +24,13 @@ type nodes struct {
 	shutdownChan chan struct{}
 }
 
-//Initialise - initialise objects
+//Initialize - initialise objects
 func Initialise(configs []configuration.NodeConfig, keys configuration.Keys, heartbeatIntervalSecond int) (Nodes, error) {
 	var ns []node.Node
 	log := logger.New("nodes")
 	shutdownCh := make(chan struct{})
 	node.Initialise(shutdownCh)
-	db.Start(shutdownCh)
+	go db.Start(shutdownCh)
 
 	for idx, c := range configs {
 		n, err := node.NewNode(c, keys, idx, heartbeatIntervalSecond)

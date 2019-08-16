@@ -54,21 +54,25 @@ func main() {
 
 	err = zmqAuth()
 	if nil != err {
+		log.Errorf("authorize zmq with error: %s", err)
+		return
+	}
+
+	log.Info("initialize db")
+	err = db.Initialize(config.Influx(), logger.New("influxdb"))
+	if nil != err {
+		log.Errorf("initialise db with error: %s", err)
 		return
 	}
 
 	log.Info("initialize nodes")
-
-	err = db.Initialise(config.Influx(), logger.New("influxdb"))
-	if nil != err {
-		return
-	}
-
 	n, err := initializeNodes(config)
 	if nil != err {
+		log.Errorf("initialize nodes with error: %s", err)
 		return
 	}
 
+	log.Info("start monitor")
 	n.Monitor()
 
 	ch := make(chan os.Signal)

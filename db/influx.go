@@ -1,6 +1,8 @@
 package db
 
 import (
+	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -96,6 +98,7 @@ func (i *Influx) write() (err error) {
 
 	var pt *dbClient.Point
 	for _, d := range points {
+		i.Log.Debugf("measurement: %s, tags: %v, fields: %v, time: %s", d.Measurement, d.Tags, d.Fields, d.Timing)
 		pt, err = dbClient.NewPoint(d.Measurement, d.Tags, d.Fields, d.Timing)
 		if nil != err {
 			i.Lock()
@@ -117,9 +120,9 @@ func (i *Influx) write() (err error) {
 	return
 }
 
-//Initialise - initialise package
-func Initialise(config configuration.InfluxDBConfig, log *logger.L) error {
-	ptr, err := initialise(config, log)
+//Initialize - initialize package
+func Initialize(config configuration.InfluxDBConfig, log *logger.L) error {
+	ptr, err := initialize(config, log)
 	if nil != err {
 		return err
 	}
@@ -127,9 +130,9 @@ func Initialise(config configuration.InfluxDBConfig, log *logger.L) error {
 	return err
 }
 
-func initialise(config configuration.InfluxDBConfig, log *logger.L) (*Influx, error) {
+func initialize(config configuration.InfluxDBConfig, log *logger.L) (*Influx, error) {
 	c, err := dbClient.NewHTTPClient(dbClient.HTTPConfig{
-		Addr:               config.IPv4,
+		Addr:               connection(config.IPv4, config.Port),
 		Username:           config.User,
 		Password:           config.Password,
 		UserAgent:          "",
@@ -146,14 +149,21 @@ func initialise(config configuration.InfluxDBConfig, log *logger.L) (*Influx, er
 	return &Influx{
 		Client:   c,
 		Database: config.Database,
-		Data:     make([]InfluxData, dataSize),
+		Data:     make([]InfluxData, 0, dataSize),
 		Log:      log,
 	}, nil
 }
 
+func connection(addr string, port string) string {
+	if strings.HasPrefix(addr, "http://") || strings.HasPrefix(addr, "https://") {
+		return fmt.Sprintf("%s:%s", addr, port)
+	}
+	return fmt.Sprintf("http://%s:%s", addr, port)
+}
+
 //NewInfluxDBWriter - create Influx dbClient writer
 func NewInfluxDBWriter(config configuration.InfluxDBConfig, log *logger.L) (DBWriter, error) {
-	return initialise(config, log)
+	return initialize(config, log)
 }
 
 //Add - set Fields and Tags
@@ -165,7 +175,7 @@ func Add(data InfluxData) {
 
 //Start - start background loop
 func Start(shutdownChan chan struct{}) {
-	go internalData.Loop(shutdownChan)
+	internalData.Loop(shutdownChan)
 	<-shutdownChan
 	internalData.Log.Info("shutdown")
 }

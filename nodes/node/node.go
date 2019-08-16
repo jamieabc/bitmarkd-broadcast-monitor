@@ -19,6 +19,7 @@ type Node interface {
 	CommandSender() network.Client
 	Log() *logger.L
 	Monitor()
+	Name() string
 	Remote() Remote
 }
 
@@ -64,6 +65,7 @@ func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int, 
 		heartbeatRecorder:   recorder.NewHeartbeat(float64(heartbeatIntervalSecond), shutdownChan),
 		id:                  idx,
 		log:                 log,
+		name:                config.Name,
 		transactionRecorder: recorder.NewTransaction(),
 	}
 
@@ -79,6 +81,7 @@ func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int, 
 	if nil != err {
 		return nil, err
 	}
+	log.Infof("new node: %s", n.Name())
 
 	return n, nil
 }
@@ -144,6 +147,8 @@ func (n *node) Monitor() {
 		heartbeat:   n.heartbeatRecorder,
 		transaction: n.transactionRecorder,
 	}
+
+	n.log.Info("start to monitor")
 	go receiverLoop(n, rs, n.id)
 	go checkerLoop(n, rs)
 
@@ -153,4 +158,9 @@ func (n *node) Monitor() {
 
 	n.Log().Info("stop")
 	return
+}
+
+//Name - return node name
+func (n *node) Name() string {
+	return n.name
 }
