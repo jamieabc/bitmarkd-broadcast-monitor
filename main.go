@@ -7,6 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/db"
+
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/fault"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/network"
 
@@ -56,6 +58,11 @@ func main() {
 	}
 
 	log.Info("initialize nodes")
+
+	err = db.Initialise(config.Influx(), logger.New("influxdb"))
+	if nil != err {
+		return
+	}
 
 	n, err := initializeNodes(config)
 	if nil != err {

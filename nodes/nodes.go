@@ -30,6 +30,7 @@ func Initialise(configs []configuration.NodeConfig, keys configuration.Keys, hea
 	log := logger.New("nodes")
 	shutdownCh := make(chan struct{})
 	node.Initialise(shutdownCh)
+	db.Start(shutdownCh)
 
 	for idx, c := range configs {
 		n, err := node.NewNode(c, keys, idx, heartbeatIntervalSecond)
