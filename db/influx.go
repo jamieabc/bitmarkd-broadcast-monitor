@@ -35,11 +35,16 @@ type Influx struct {
 	Log      *logger.L
 }
 
-//Close - close Influx db connection
+//Close - close influx db connection
 func (i *Influx) Close() error {
+	if err := i.write(); nil != err {
+		i.Log.Errorf("write to influx db with error: %s", err)
+	}
+
 	if err := i.Client.Close(); nil != err {
 		return err
 	}
+
 	return nil
 }
 
@@ -53,10 +58,11 @@ func (i *Influx) Add(data InfluxData) {
 //Loop - background loop
 func (i *Influx) Loop(shutdownChan chan struct{}) {
 	timer := time.After(looperIntervalSecond)
+	defer i.Close()
+
 	for {
 		select {
 		case <-shutdownChan:
-			_ = i.Close()
 			return
 		case <-timer:
 			err := i.write()
@@ -159,18 +165,7 @@ func Add(data InfluxData) {
 
 //Start - start background loop
 func Start(shutdownChan chan struct{}) {
-	timer := time.After(looperIntervalSecond)
-	for {
-		select {
-		case <-shutdownChan:
-			_ = internalData.Close()
-			return
-		case <-timer:
-			err := internalData.write()
-			if nil != err {
-				internalData.Log.Errorf("write to influx db with error: %s", err)
-			}
-			timer = time.After(looperIntervalSecond)
-		}
-	}
+	go internalData.Loop(shutdownChan)
+	<-shutdownChan
+	internalData.Log.Info("shutdown")
 }
