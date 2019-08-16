@@ -1,7 +1,6 @@
 package db
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -14,7 +13,7 @@ import (
 
 const (
 	dataSize             = 100
-	looperIntervalSecond = 10 * time.Second
+	looperIntervalSecond = 5 * time.Second
 )
 
 //InfluxData - data write to influx db
@@ -31,7 +30,7 @@ type Influx struct {
 	Client   dbClient.Client
 	Database string
 	Data     []InfluxData
-	log      *logger.L
+	Log      *logger.L
 }
 
 //Close - close Influx db connection
@@ -55,12 +54,12 @@ func (i *Influx) Loop(shutdownChan chan struct{}) {
 	for {
 		select {
 		case <-shutdownChan:
+			_ = i.Close()
 			return
 		case <-timer:
 			err := i.write()
 			if nil != err {
-				fmt.Printf("write to Influx db with error: %s", err)
-				i.log.Errorf("write to influx db with error: %s", err)
+				i.Log.Errorf("write to influx db with error: %s", err)
 			}
 			timer = time.After(looperIntervalSecond)
 		}
@@ -68,10 +67,9 @@ func (i *Influx) Loop(shutdownChan chan struct{}) {
 }
 
 func (i *Influx) write() (err error) {
-	defer func() {
-		err = i.Close()
+	if 0 == len(i.Data) {
 		return
-	}()
+	}
 
 	bp, err := dbClient.NewBatchPoints(dbClient.BatchPointsConfig{
 		Database: i.Database,
@@ -92,6 +90,9 @@ func (i *Influx) write() (err error) {
 	for _, d := range points {
 		pt, err = dbClient.NewPoint(d.Measurement, d.Tags, d.Fields, d.Timing)
 		if nil != err {
+			i.Lock()
+			i.Data = append(i.Data, points...)
+			i.Unlock()
 			return
 		}
 
@@ -99,6 +100,9 @@ func (i *Influx) write() (err error) {
 	}
 
 	if err = i.Client.Write(bp); nil != err {
+		i.Lock()
+		i.Data = append(i.Data, points...)
+		i.Unlock()
 		return
 	}
 
@@ -126,6 +130,6 @@ func NewInfluxDBWriter(config configuration.InfluxDBConfig, log *logger.L) (DBWr
 		Client:   c,
 		Database: config.Database,
 		Data:     make([]InfluxData, dataSize),
-		log:      log,
+		Log:      log,
 	}, nil
 }

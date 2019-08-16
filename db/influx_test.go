@@ -1,8 +1,12 @@
 package db_test
 
 import (
+	"fmt"
+	"os"
 	"testing"
 	"time"
+
+	"github.com/bitmark-inc/logger"
 
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/db/mocks"
 
@@ -16,9 +20,37 @@ import (
 )
 
 const (
-	originalIntervalSecond = 10 * time.Second
+	originalIntervalSecond = 5 * time.Second
 	looperIntervalSecond   = originalIntervalSecond + 1*time.Second
+	testingDirName         = "testing"
 )
+
+func setupTestLogger() {
+	removeFiles()
+	_ = os.Mkdir(testingDirName, 0700)
+
+	logging := logger.Configuration{
+		Directory: testingDirName,
+		File:      "testing.Log",
+		Size:      1048576,
+		Count:     10,
+		Console:   false,
+		Levels: map[string]string{
+			logger.DefaultTag: "critical",
+		},
+	}
+
+	// start logging
+	_ = logger.Initialise(logging)
+}
+
+func teardownTestLogger() {
+	removeFiles()
+}
+
+func removeFiles() {
+	_ = os.RemoveAll(testingDirName)
+}
 
 func setupTestDBConfig() configuration.InfluxDBConfig {
 	return configuration.InfluxDBConfig{
@@ -31,11 +63,14 @@ func setupTestDBConfig() configuration.InfluxDBConfig {
 }
 
 func setupTestInflux(t *testing.T) (*db.Influx, *gomock.Controller, *mocks.MockClient) {
+	setupTestLogger()
+
 	ctl := gomock.NewController(t)
 	mock := mocks.NewMockClient(ctl)
 	return &db.Influx{
 		Database: "test",
 		Client:   mock,
+		Log:      logger.New("test"),
 	}, ctl, mock
 }
 
@@ -49,6 +84,7 @@ func TestNewInfluxDBWriter(t *testing.T) {
 func TestAdd(t *testing.T) {
 	i, ctl, _ := setupTestInflux(t)
 	defer ctl.Finish()
+	defer teardownTestLogger()
 
 	data := db.InfluxData{
 		Fields:      nil,
@@ -64,12 +100,12 @@ func TestAdd(t *testing.T) {
 	assert.Equal(t, data, i.Data[0], "wrong data")
 }
 
-func TestLoop(t *testing.T) {
+func TestLoopWhenWriteNormal(t *testing.T) {
 	i, ctl, mock := setupTestInflux(t)
 	defer ctl.Finish()
+	defer teardownTestLogger()
 
 	mock.EXPECT().Write(gomock.Any()).Return(nil).Times(1)
-	mock.EXPECT().Close().Return(nil).Times(1)
 
 	data := db.InfluxData{
 		Fields:      map[string]interface{}{"name": "node"},
@@ -85,7 +121,29 @@ func TestLoop(t *testing.T) {
 	timer := time.After(looperIntervalSecond)
 	<-timer
 
-	shutdownChan <- struct{}{}
-
 	assert.Equal(t, 0, len(i.Data), "not cleanup after write to db")
+}
+
+func TestLoopWhenWriteError(t *testing.T) {
+	i, ctl, mock := setupTestInflux(t)
+	defer ctl.Finish()
+	defer teardownTestLogger()
+
+	mock.EXPECT().Write(gomock.Any()).Return(fmt.Errorf("error")).Times(1)
+
+	data := db.InfluxData{
+		Fields:      map[string]interface{}{"name": "node"},
+		Measurement: "measurement",
+		Tags:        map[string]string{"value": "1.2"},
+		Timing:      time.Time{},
+	}
+
+	i.Add(data)
+	shutdownChan := make(chan struct{}, 1)
+	go i.Loop(shutdownChan)
+
+	timer := time.After(looperIntervalSecond)
+	<-timer
+
+	assert.Equal(t, 1, len(i.Data), "not cleanup after write to db")
 }
