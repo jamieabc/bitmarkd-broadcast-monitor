@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"time"
 
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/recorder"
 
@@ -17,7 +16,6 @@ import (
 type Node interface {
 	BroadcastReceiver() network.Client
 	CommandSenderAndReceiver() network.Client
-	CheckTimer() *time.Timer
 	CloseConnection() error
 	DropRate()
 	Log() *logger.L
@@ -31,7 +29,6 @@ type recorders struct {
 }
 
 type node struct {
-	checkTimer          *time.Timer
 	remote              Remote
 	config              configuration.NodeConfig
 	heartbeatRecorder   recorder.Recorder
@@ -46,10 +43,6 @@ type nodeKeys struct {
 	public       []byte
 	remotePublic []byte
 }
-
-const (
-	checkIntervalSecond = 2 * time.Minute
-)
 
 var (
 	shutdownChan <-chan struct{}
@@ -68,7 +61,6 @@ func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int, 
 	log := logger.New(config.Name)
 
 	n := &node{
-		checkTimer:          time.NewTimer(checkIntervalSecond),
 		config:              config,
 		heartbeatRecorder:   recorder.NewHeartbeat(float64(heartbeatIntervalSecond), shutdownChan),
 		id:                  idx,
@@ -129,11 +121,6 @@ func (n *node) CommandSenderAndReceiver() network.Client {
 	return n.remote.CommandSenderAndReceiver()
 }
 
-//CheckTimer - get sender timer
-func (n *node) CheckTimer() *time.Timer {
-	return n.checkTimer
-}
-
 //Remote - return remote interface
 func (n *node) Remote() Remote {
 	return n.remote
@@ -166,7 +153,6 @@ func (n *node) Monitor() {
 	go receiverLoop(n, rs, n.id)
 	go checkerLoop(n, rs)
 
-	n.checkTimer.Reset(checkIntervalSecond)
 	go senderLoop(n)
 
 	<-shutdownChan

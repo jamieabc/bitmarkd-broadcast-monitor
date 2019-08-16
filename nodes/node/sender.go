@@ -1,18 +1,26 @@
 package node
 
 import (
+	"time"
+
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/communication"
 )
 
+const (
+	checkIntervalSecond = 2 * time.Minute
+)
+
 func senderLoop(n Node) {
 	log := n.Log()
-loop:
+	timer := time.After(checkIntervalSecond)
+
 	for {
 		select {
 		case <-shutdownChan:
 			log.Infof("terminate sender loop")
-			break loop
+			return
+
 		case <-notifyChan:
 			height, err := remoteHeight(n)
 			if nil != err {
@@ -25,7 +33,8 @@ loop:
 				continue
 			}
 			log.Infof("remote height %d with digest %s", height, digest)
-		case <-n.CheckTimer().C:
+
+		case <-timer:
 			info, err := remoteInfo(n)
 			if nil != err {
 				log.Errorf("get remote info error: %s", err)
@@ -38,7 +47,7 @@ loop:
 				continue
 			}
 			log.Infof("remote height %d digest %s", info.Height, digest)
-			n.CheckTimer().Reset(checkIntervalSecond)
+			timer = time.After(checkIntervalSecond)
 		}
 	}
 }
