@@ -68,15 +68,15 @@ func TestLoop(t *testing.T) {
 	i, ctl, mock := setupTestInflux(t)
 	defer ctl.Finish()
 
+	mock.EXPECT().Write(gomock.Any()).Return(nil).Times(1)
+	mock.EXPECT().Close().Return(nil).Times(1)
+
 	data := db.InfluxData{
 		Fields:      map[string]interface{}{"name": "node"},
 		Measurement: "measurement",
 		Tags:        map[string]string{"value": "1.2"},
 		Timing:      time.Time{},
 	}
-
-	mock.EXPECT().Write(gomock.Any()).Return(nil).Times(1)
-	mock.EXPECT().Close().Return(nil).Times(1)
 
 	i.Add(data)
 	shutdownChan := make(chan struct{}, 1)
