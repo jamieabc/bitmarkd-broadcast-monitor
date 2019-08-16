@@ -17,7 +17,6 @@ type Node interface {
 	BroadcastReceiver() network.Client
 	CommandSenderAndReceiver() network.Client
 	CloseConnection() error
-	DropRate()
 	Log() *logger.L
 	Monitor()
 	Remote() Remote
@@ -132,11 +131,6 @@ func (n *node) CloseConnection() error {
 		return err
 	}
 	return nil
-}
-
-//DropRate - drop rate
-func (n *node) DropRate() {
-	return
 }
 
 //Log - get logger
