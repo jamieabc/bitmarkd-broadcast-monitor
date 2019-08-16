@@ -124,7 +124,7 @@ func (c *configuration) String() string {
 	}
 	str.WriteString(fmt.Sprintf("heartbeat interval: %d seconds\n", c.HeartbeatIntervalSecond))
 	str.WriteString(fmt.Sprintf("logging: %+v\n", c.Logging))
-	str.WriteString("influx database:")
+	str.WriteString("influx database:\n")
 	str.WriteString(fmt.Sprintf("\tip:\t%s\n\tport:\t%s\n\tuser:\t%s\n\tpassword:\t%s\n",
 		c.InfluxDB.IPv4,
 		c.InfluxDB.Port,
