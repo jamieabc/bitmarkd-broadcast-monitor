@@ -41,7 +41,7 @@ func setupTestInflux(t *testing.T) (*db.Influx, *gomock.Controller, *mocks.MockC
 
 func TestNewInfluxDBWriter(t *testing.T) {
 	config := setupTestDBConfig()
-	_, err := db.NewInfluxDBWriter(config)
+	_, err := db.NewInfluxDBWriter(config, nil)
 
 	assert.Equal(t, nil, err, "wrong error")
 }

@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bitmark-inc/logger"
+
 	_ "github.com/influxdata/influxdb1-client"
 	dbClient "github.com/influxdata/influxdb1-client/v2"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/configuration"
@@ -29,6 +31,7 @@ type Influx struct {
 	Client   dbClient.Client
 	Database string
 	Data     []InfluxData
+	log      *logger.L
 }
 
 //Close - close Influx db connection
@@ -57,6 +60,7 @@ func (i *Influx) Loop(shutdownChan chan struct{}) {
 			err := i.write()
 			if nil != err {
 				fmt.Printf("write to Influx db with error: %s", err)
+				i.log.Errorf("write to influx db with error: %s", err)
 			}
 			timer = time.After(looperIntervalSecond)
 		}
@@ -102,7 +106,7 @@ func (i *Influx) write() (err error) {
 }
 
 //NewInfluxDBWriter - create Influx dbClient writer
-func NewInfluxDBWriter(config configuration.InfluxDBConfig) (DBWriter, error) {
+func NewInfluxDBWriter(config configuration.InfluxDBConfig, log *logger.L) (DBWriter, error) {
 	c, err := dbClient.NewHTTPClient(dbClient.HTTPConfig{
 		Addr:               config.IPv4,
 		Username:           config.User,
@@ -122,5 +126,6 @@ func NewInfluxDBWriter(config configuration.InfluxDBConfig) (DBWriter, error) {
 		Client:   c,
 		Database: config.Database,
 		Data:     make([]InfluxData, dataSize),
+		log:      log,
 	}, nil
 }
