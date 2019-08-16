@@ -15,8 +15,8 @@ import (
 //Node - node interface
 type Node interface {
 	BroadcastReceiver() network.Client
-	CommandSenderAndReceiver() network.Client
-	CloseConnection() error
+	Close() error
+	CommandSender() network.Client
 	Log() *logger.L
 	Monitor()
 	Remote() Remote
@@ -115,9 +115,9 @@ func (n *node) BroadcastReceiver() network.Client {
 	return n.remote.BroadcastReceiver()
 }
 
-//CommandSenderAndReceiver - network remote of command sender and receiver
-func (n *node) CommandSenderAndReceiver() network.Client {
-	return n.remote.CommandSenderAndReceiver()
+//CommandSender - network remote of command sender and receiver
+func (n *node) CommandSender() network.Client {
+	return n.remote.CommandSender()
 }
 
 //Remote - return remote interface
@@ -125,8 +125,8 @@ func (n *node) Remote() Remote {
 	return n.remote
 }
 
-//CloseConnection - close connection
-func (n *node) CloseConnection() error {
+//Close - close connection
+func (n *node) Close() error {
 	if err := n.remote.Close(); nil != err {
 		return err
 	}

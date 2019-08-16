@@ -39,7 +39,7 @@ func receiverLoop(n Node, rs recorders, id int) {
 
 	<-shutdownChan
 
-	if err := n.CloseConnection(); nil != err {
+	if err := n.Close(); nil != err {
 		log.Errorf("close connection with error: %s", err)
 	}
 	log.Flush()
