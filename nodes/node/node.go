@@ -18,13 +18,11 @@ type Node interface {
 	BroadcastReceiver() network.Client
 	CommandSenderAndReceiver() network.Client
 	CheckTimer() *time.Timer
-	Remote() Remote
 	CloseConnection() error
 	DropRate()
 	Log() *logger.L
 	Monitor()
-	StopMonitor()
-	Verify()
+	Remote() Remote
 }
 
 type recorders struct {
@@ -174,15 +172,5 @@ func (n *node) Monitor() {
 	<-shutdownChan
 
 	n.Log().Info("stop")
-	return
-}
-
-//StopMonitor - stop monitor
-func (n *node) StopMonitor() {
-	return
-}
-
-//Verify - verify record data
-func (n *node) Verify() {
 	return
 }

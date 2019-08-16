@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/db"
+
 	"github.com/bitmark-inc/logger"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/configuration"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/nodes/node"
@@ -22,7 +24,7 @@ type nodes struct {
 	shutdownChan chan struct{}
 }
 
-//Initialise - initialise nodes
+//Initialise - initialise objects
 func Initialise(configs []configuration.NodeConfig, keys configuration.Keys, heartbeatIntervalSecond int) (Nodes, error) {
 	var ns []node.Node
 	log := logger.New("nodes")

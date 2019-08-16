@@ -12,7 +12,6 @@ import (
 type heartbeat struct {
 	sync.Mutex
 	data         map[receivedAt]expiredAt
-	nextItemID   int
 	received     bool
 	shutdownChan <-chan struct{}
 }
