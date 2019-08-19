@@ -14,4 +14,7 @@ var (
 
 	//InvalidEmptyConfigFile - invalid empty config file
 	InvalidEmptyConfigFile = errors.New("empty config file")
+
+	//InvalidConnection - invalid ip or port
+	InvalidConnection = errors.New("ip or port invalid")
 )

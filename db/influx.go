@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/fault"
+
 	"github.com/bitmark-inc/logger"
 
 	_ "github.com/influxdata/influxdb1-client"
@@ -35,10 +37,15 @@ type Influx struct {
 	Database string
 	Data     []InfluxData
 	Log      *logger.L
+	OK       bool
 }
 
 //Close - close influx db connection
 func (i *Influx) Close() error {
+	if !i.isDBOK() {
+		return nil
+	}
+
 	if err := i.write(); nil != err {
 		i.Log.Errorf("write to influx db with error: %s", err)
 	}
@@ -52,6 +59,10 @@ func (i *Influx) Close() error {
 
 //Add - set Fields and Tags
 func (i *Influx) Add(data InfluxData) {
+	if !i.isDBOK() {
+		return
+	}
+
 	i.Lock()
 	i.Data = append(i.Data, data)
 	i.Unlock()
@@ -59,6 +70,10 @@ func (i *Influx) Add(data InfluxData) {
 
 //Loop - background loop
 func (i *Influx) Loop(shutdownChan chan struct{}) {
+	if !i.isDBOK() {
+		return
+	}
+
 	timer := time.After(looperIntervalSecond)
 	defer i.Close()
 
@@ -120,17 +135,28 @@ func (i *Influx) write() (err error) {
 	return
 }
 
+func (i *Influx) isDBOK() bool {
+	return i.OK
+}
+
 //Initialise - initialise package
 func Initialise(config configuration.InfluxDBConfig, log *logger.L) error {
 	ptr, err := initialise(config, log)
 	if nil != err {
 		return err
 	}
+
 	internalData = *ptr
 	return err
 }
 
 func initialise(config configuration.InfluxDBConfig, log *logger.L) (*Influx, error) {
+	ok := true
+	if "" == config.IPv4 || "" == config.Port {
+		log.Warnf("connection error: %s", fault.InvalidConnection)
+		ok = false
+	}
+
 	c, err := dbClient.NewHTTPClient(dbClient.HTTPConfig{
 		Addr:               connection(config.IPv4, config.Port),
 		Username:           config.User,
@@ -151,6 +177,7 @@ func initialise(config configuration.InfluxDBConfig, log *logger.L) (*Influx, er
 		Database: config.Database,
 		Data:     make([]InfluxData, 0, dataSize),
 		Log:      log,
+		OK:       ok,
 	}, nil
 }
 
@@ -168,6 +195,10 @@ func NewInfluxDBWriter(config configuration.InfluxDBConfig, log *logger.L) (DBWr
 
 //Add - set Fields and Tags
 func Add(data InfluxData) {
+	if !internalData.isDBOK() {
+		return
+	}
+
 	internalData.Lock()
 	internalData.Data = append(internalData.Data, data)
 	internalData.Unlock()
@@ -175,6 +206,10 @@ func Add(data InfluxData) {
 
 //Start - start background loop
 func Start(shutdownChan chan struct{}) {
+	if !internalData.isDBOK() {
+		return
+	}
+
 	internalData.Loop(shutdownChan)
 	<-shutdownChan
 	internalData.Log.Info("shutdown")

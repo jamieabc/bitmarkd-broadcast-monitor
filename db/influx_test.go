@@ -71,6 +71,7 @@ func setupTestInflux(t *testing.T) (*db.Influx, *gomock.Controller, *mocks.MockC
 		Database: "test",
 		Client:   mock,
 		Log:      logger.New("test"),
+		OK:       true,
 	}, ctl, mock
 }
 
