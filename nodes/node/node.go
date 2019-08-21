@@ -152,7 +152,9 @@ func (n *node) Monitor() {
 	go receiverLoop(n, rs, n.id)
 	go checkerLoop(n, rs)
 
-	go senderLoop(n)
+	if n.config.CommandPort != "" {
+		go senderLoop(n)
+	}
 
 	<-shutdownChan
 

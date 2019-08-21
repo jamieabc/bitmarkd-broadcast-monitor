@@ -40,13 +40,17 @@ func newClient(config configuration.NodeConfig, nodeKey *nodeKeys) (Remote, erro
 		return nil, err
 	}
 
-	commandSenderAndReceiver, err := newZmqClient(nodeKey, connectionInfo{
-		addressAndPort: commandAddressAndPort(config),
-		chain:          config.Chain,
-		zmqType:        zmq.REQ,
-	})
-	if nil != err {
-		return nil, err
+	var commandSenderAndReceiver network.Client
+
+	if config.CommandPort != "" {
+		commandSenderAndReceiver, err = newZmqClient(nodeKey, connectionInfo{
+			addressAndPort: commandAddressAndPort(config),
+			chain:          config.Chain,
+			zmqType:        zmq.REQ,
+		})
+		if nil != err {
+			return nil, err
+		}
 	}
 
 	return &remote{
