@@ -50,8 +50,8 @@ func receiverLoop(n Node, rs recorders, id int) {
 func receiverRoutine(n Node, rs recorders, id int) {
 	eventChan := make(chan zmq.Polled, eventChannelSize)
 	log := n.Log()
-	checkTimer := time.After(checkTimeSecond)
-	heartbeatTimer := time.After(heartbeatTimeoutSecond)
+	checkTimer := time.NewTimer(checkTimeSecond)
+	heartbeatTimer := time.NewTimer(heartbeatTimeoutSecond)
 	checked := false
 
 	poller, err := initialisePoller(n, id, eventChan)
@@ -70,14 +70,14 @@ func receiverRoutine(n Node, rs recorders, id int) {
 				//error might comes from reopen socket, will behave normal after some retries
 				continue
 			}
-			process(n, rs, data, &checked, &heartbeatTimer)
+			process(n, rs, data, &checked, heartbeatTimer)
 		case <-shutdownChan:
 			log.Infof("terminate receiver loop")
 			return
-		case <-checkTimer:
+		case <-checkTimer.C:
 			checked = false
-			checkTimer = time.After(checkTimeSecond)
-		case <-heartbeatTimer:
+			checkTimer.Reset(checkTimeSecond)
+		case <-heartbeatTimer.C:
 			log.Warn("heartbeat timeout exceed, reopen heartbeat socket")
 			poller.Remove(n.BroadcastReceiver())
 			err = n.BroadcastReceiver().Reconnect()
@@ -87,7 +87,7 @@ func receiverRoutine(n Node, rs recorders, id int) {
 			}
 			poller.Add(n.BroadcastReceiver(), zmq.POLLIN)
 			time.Sleep(reconnectDelayMillisecond)
-			heartbeatTimer = time.After(heartbeatTimeoutSecond)
+			heartbeatTimer.Reset(heartbeatTimeoutSecond)
 		}
 	}
 }
@@ -101,7 +101,7 @@ func initialisePoller(n Node, id int, eventChan chan zmq.Polled) (network.Poller
 	return poller, nil
 }
 
-func process(n Node, rs recorders, data [][]byte, checked *bool, heartbeatTimer *<-chan time.Time) {
+func process(n Node, rs recorders, data [][]byte, checked *bool, heartbeatTimer *time.Timer) {
 	log := n.Log()
 	blockchain := string(data[0])
 	if !chain.Valid(blockchain) {
@@ -137,7 +137,7 @@ func process(n Node, rs recorders, data [][]byte, checked *bool, heartbeatTimer 
 	case heartbeatCmdStr:
 		log.Infof("receive heartbeat")
 		rs.heartbeat.Add(now)
-		*heartbeatTimer = time.After(heartbeatTimeoutSecond)
+		heartbeatTimer.Reset(heartbeatTimeoutSecond)
 
 	default:
 		log.Debugf("receive %s", category)

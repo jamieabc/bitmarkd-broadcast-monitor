@@ -13,7 +13,7 @@ const (
 
 func senderLoop(n Node) {
 	log := n.Log()
-	timer := time.After(checkIntervalSecond)
+	timer := time.NewTimer(checkIntervalSecond)
 
 	for {
 		select {
@@ -34,7 +34,7 @@ func senderLoop(n Node) {
 			}
 			log.Infof("remote height %d with digest %s", height, digest)
 
-		case <-timer:
+		case <-timer.C:
 			info, err := remoteInfo(n)
 			if nil != err {
 				log.Errorf("get remote info error: %s", err)
@@ -47,7 +47,7 @@ func senderLoop(n Node) {
 				continue
 			}
 			log.Infof("remote height %d digest %s", info.Height, digest)
-			timer = time.After(checkIntervalSecond)
+			timer.Reset(checkIntervalSecond)
 		}
 	}
 }

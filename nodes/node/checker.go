@@ -15,7 +15,7 @@ const (
 
 func checkerLoop(n Node, rs recorders) {
 	log := n.Log()
-	timer := time.After(checkInterval)
+	timer := time.NewTimer(checkInterval)
 
 	for {
 		select {
@@ -23,7 +23,7 @@ func checkerLoop(n Node, rs recorders) {
 			log.Info("terminate checker loop")
 			return
 
-		case <-timer:
+		case <-timer.C:
 			hs := rs.heartbeat.Summary().(*recorder.HeartbeatSummary)
 			ts := rs.transaction.Summary().(*recorder.TransactionSummary)
 
@@ -31,7 +31,7 @@ func checkerLoop(n Node, rs recorders) {
 
 			log.Infof("heartbeat summary: %s", hs)
 			log.Infof("transaction summary: %s", ts)
-			timer = time.After(checkInterval)
+			timer.Reset(checkInterval)
 		}
 	}
 }

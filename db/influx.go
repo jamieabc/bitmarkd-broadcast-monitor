@@ -74,19 +74,19 @@ func (i *Influx) Loop(shutdownChan chan struct{}) {
 		return
 	}
 
-	timer := time.After(looperIntervalSecond)
+	timer := time.NewTimer(looperIntervalSecond)
 	defer i.Close()
 
 	for {
 		select {
 		case <-shutdownChan:
 			return
-		case <-timer:
+		case <-timer.C:
 			err := i.write()
 			if nil != err {
 				i.Log.Errorf("write to influx db with error: %s", err)
 			}
-			timer = time.After(looperIntervalSecond)
+			timer.Reset(looperIntervalSecond)
 		}
 	}
 }
