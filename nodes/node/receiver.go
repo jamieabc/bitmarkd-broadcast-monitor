@@ -141,6 +141,9 @@ func process(n Node, rs recorders, data [][]byte, checked *bool, heartbeatTimer 
 			<-heartbeatTimer.C
 		}
 		log.Debug("reset heartbeat timeout timer")
+		if !heartbeatTimer.Stop() {
+			<-heartbeatTimer.C
+		}
 		heartbeatTimer.Reset(heartbeatTimeoutSecond)
 
 	default:
