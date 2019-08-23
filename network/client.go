@@ -46,15 +46,6 @@ const (
 	identifierSize = 32
 )
 
-type globalClientDataType struct {
-	sync.Mutex
-	clients map[*zmq.Socket]*client
-}
-
-var globalClientData = globalClientDataType{
-	clients: make(map[*zmq.Socket]*client),
-}
-
 // create a client socket usually of type zmq.REQ or zmq.SUB
 func NewClient(socketType zmq.Type, privateKey []byte, publicKey []byte, timeout time.Duration) (*client, error) {
 
@@ -204,11 +195,6 @@ func (client *client) openSocket() error {
 
 	client.socket = socket
 
-	// register client globally
-	globalClientData.Lock()
-	globalClientData.clients[socket] = client
-	globalClientData.Unlock()
-
 	return nil
 failure:
 	socket.Close()
@@ -230,11 +216,6 @@ func (client *client) closeSocket() error {
 		_ = client.socket.Disconnect(client.address)
 	}
 
-	// unregister client globally
-	globalClientData.Lock()
-	delete(globalClientData.clients, client.socket)
-	globalClientData.Unlock()
-
 	// close socket
 	err := client.socket.Close()
 	client.socket = nil
@@ -243,7 +224,6 @@ func (client *client) closeSocket() error {
 
 // disconnect old address and connect to new
 func (client *client) Connect(conn *Connection, serverPublicKey []byte, prefix string) error {
-
 	// if already connected, disconnect first
 	err := client.closeSocket()
 	if nil != err {
