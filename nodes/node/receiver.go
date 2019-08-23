@@ -137,6 +137,9 @@ func process(n Node, rs recorders, data [][]byte, checked *bool, heartbeatTimer 
 	case heartbeatCmdStr:
 		log.Infof("receive heartbeat")
 		rs.heartbeat.Add(now)
+		if !heartbeatTimer.Stop() {
+			<-heartbeatTimer.C
+		}
 		heartbeatTimer.Reset(heartbeatTimeoutSecond)
 
 	default:
