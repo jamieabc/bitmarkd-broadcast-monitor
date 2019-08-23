@@ -26,7 +26,7 @@ const (
 	receiveBroadcastIntervalInSecond = 120 * time.Second
 	heartbeatTimeoutSecond           = 140 * time.Second
 	eventChannelSize                 = 100
-	reconnectDelayMillisecond        = 5 * time.Millisecond
+	reconnectDelayMillisecond        = 10 * time.Millisecond
 )
 
 func receiverLoop(n Node, rs recorders, id int) {
@@ -60,8 +60,10 @@ func receiverRoutine(n Node, rs recorders, id int) {
 		return
 	}
 
+	go poller.Start(receiveBroadcastIntervalInSecond)
+
 	for {
-		_ = poller.Start(receiveBroadcastIntervalInSecond)
+		log.Debug("waiting events...")
 		select {
 		case polled := <-eventChan:
 			data, err := polled.Socket.RecvMessageBytes(0)
@@ -71,12 +73,15 @@ func receiverRoutine(n Node, rs recorders, id int) {
 				continue
 			}
 			process(n, rs, data, &checked, heartbeatTimer)
+
 		case <-shutdownChan:
 			log.Infof("terminate receiver loop")
 			return
+
 		case <-checkTimer.C:
 			checked = false
 			checkTimer.Reset(checkTimeSecond)
+
 		case <-heartbeatTimer.C:
 			log.Warn("heartbeat timeout exceed, reopen heartbeat socket")
 			poller.Remove(n.BroadcastReceiver())
@@ -87,11 +92,6 @@ func receiverRoutine(n Node, rs recorders, id int) {
 			}
 			poller.Add(n.BroadcastReceiver(), zmq.POLLIN)
 			time.Sleep(reconnectDelayMillisecond)
-			if !heartbeatTimer.Stop() {
-				fmt.Println("clear heartbeat timer channel")
-				<-heartbeatTimer.C
-				fmt.Println("heartbeat timer channel cleared")
-			}
 			heartbeatTimer.Reset(heartbeatTimeoutSecond)
 		}
 	}
@@ -144,11 +144,14 @@ func process(n Node, rs recorders, data [][]byte, checked *bool, heartbeatTimer 
 		rs.heartbeat.Add(now)
 		log.Debug("reset heartbeat timeout timer")
 		if !heartbeatTimer.Stop() {
-			fmt.Println("clear heartbeat timer channel")
+			log.Debug("clear heartbeat timer channel")
 			<-heartbeatTimer.C
-			fmt.Println("heartbeat timer channel cleared")
+			log.Debug("heartbeat timer channel cleared")
 		}
-		heartbeatTimer.Reset(heartbeatTimeoutSecond)
+		ok := heartbeatTimer.Reset(heartbeatTimeoutSecond)
+		if !ok {
+			log.Debug("heartbeat timer reset false")
+		}
 
 	default:
 		log.Debugf("receive %s", category)
