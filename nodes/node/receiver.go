@@ -87,6 +87,11 @@ func receiverRoutine(n Node, rs recorders, id int) {
 			}
 			poller.Add(n.BroadcastReceiver(), zmq.POLLIN)
 			time.Sleep(reconnectDelayMillisecond)
+			if !heartbeatTimer.Stop() {
+				fmt.Println("clear heartbeat timer channel")
+				<-heartbeatTimer.C
+				fmt.Println("heartbeat timer channel cleared")
+			}
 			heartbeatTimer.Reset(heartbeatTimeoutSecond)
 		}
 	}
@@ -137,12 +142,11 @@ func process(n Node, rs recorders, data [][]byte, checked *bool, heartbeatTimer 
 	case heartbeatCmdStr:
 		log.Infof("receive heartbeat")
 		rs.heartbeat.Add(now)
-		if !heartbeatTimer.Stop() {
-			<-heartbeatTimer.C
-		}
 		log.Debug("reset heartbeat timeout timer")
 		if !heartbeatTimer.Stop() {
+			fmt.Println("clear heartbeat timer channel")
 			<-heartbeatTimer.C
+			fmt.Println("heartbeat timer channel cleared")
 		}
 		heartbeatTimer.Reset(heartbeatTimeoutSecond)
 
