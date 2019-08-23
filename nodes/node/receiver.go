@@ -24,7 +24,7 @@ const (
 	heartbeatCmdStr                  = "heart"
 	checkTimeSecond                  = 60 * time.Second
 	receiveBroadcastIntervalInSecond = 120 * time.Second
-	heartbeatTimeoutSecond           = 120 * time.Second
+	heartbeatTimeoutSecond           = 140 * time.Second
 	eventChannelSize                 = 100
 	reconnectDelayMillisecond        = 5 * time.Millisecond
 )
@@ -140,6 +140,7 @@ func process(n Node, rs recorders, data [][]byte, checked *bool, heartbeatTimer 
 		if !heartbeatTimer.Stop() {
 			<-heartbeatTimer.C
 		}
+		log.Debug("reset heartbeat timeout timer")
 		heartbeatTimer.Reset(heartbeatTimeoutSecond)
 
 	default:
