@@ -23,7 +23,7 @@ const (
 	blockCmdStr                      = "block"
 	heartbeatCmdStr                  = "heart"
 	checkTimeSecond                  = 60 * time.Second
-	receiveBroadcastIntervalInSecond = 120 * time.Second
+	receiveBroadcastIntervalInSecond = 60 * time.Second
 	heartbeatTimeoutSecond           = 140 * time.Second
 	eventChannelSize                 = 100
 	reconnectDelayMillisecond        = 10 * time.Millisecond

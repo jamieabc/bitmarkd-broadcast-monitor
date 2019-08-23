@@ -85,30 +85,24 @@ func (p *poller) Remove(client Client) {
 }
 
 // Start - polling event
-func (p *poller) Start(timeout time.Duration) error {
-	p.Lock()
-	poll := p.poll
-	p.Unlock()
-
+func (p *poller) Start(timeout time.Duration) {
 	go waitShutdownEvent(p)
 
-	polled, err := poll.Poll(timeout)
-	if nil != err {
-		return err
-	}
+	for {
+		p.Lock()
+		poll := p.poll
+		p.Unlock()
 
-loop:
-	for _, zmqEvent := range polled {
-		switch zmqEvent.Socket {
-		case p.signalPair.Receiver():
-			logger.Critical("receive internal signal pair, terminate")
-			break loop
-		default:
+		polled, _ := poll.Poll(timeout)
+
+		for _, zmqEvent := range polled {
+			if p.signalPair.Receiver() == zmqEvent.Socket {
+				logger.Critical("receive internal signal pair, terminate")
+				return
+			}
 			p.eventChan <- zmqEvent
 		}
 	}
-
-	return nil
 }
 
 func (p *poller) stop() {
@@ -124,5 +118,5 @@ func waitShutdownEvent(p *poller) {
 type Poller interface {
 	Add(client Client, events zmq.State)
 	Remove(client Client)
-	Start(timeout time.Duration) error
+	Start(timeout time.Duration)
 }
