@@ -24,6 +24,10 @@ type HeartbeatSummary struct {
 	Droprate      float64
 }
 
+const (
+	maxReceivedCount = 120 / 1 //bitmarkd sends heartbeat every 1 minute, max 120 minutes data preserved
+)
+
 var (
 	fullCycleReceivedCount float64
 	intervalSecond         float64
@@ -44,6 +48,9 @@ func (h *HeartbeatSummary) String() string {
 
 func neverReceive(h *HeartbeatSummary) string {
 	expectedCount := math.Floor(h.Duration.Seconds() / intervalSecond)
+	if maxReceivedCount < expectedCount {
+		expectedCount = maxReceivedCount
+	}
 	return fmt.Sprintf("not receiving heartbeat for %s, expect to receive %d", h.Duration, int(expectedCount))
 }
 
