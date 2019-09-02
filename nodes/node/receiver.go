@@ -167,17 +167,6 @@ func process(n Node, rs recorders, data [][]byte, resetTimer *bool, checked *boo
 		rs.heartbeat.Add(now)
 		*resetTimer = true
 
-		//log.Debug("reset heartbeat timeout timer")
-		//if !resetTimer.Stop() {
-		//	log.Debug("clear heartbeat timer channel")
-		//	<-resetTimer.C
-		//	log.Debug("heartbeat timer channel cleared")
-		//}
-		//ok := resetTimer.Reset(heartbeatTimeoutSecond)
-		//if ok {
-		//	log.Warn("heartbeat timer still active")
-		//}
-
 	default:
 		log.Debugf("receive %s", category)
 	}
