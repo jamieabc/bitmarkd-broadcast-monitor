@@ -108,6 +108,7 @@ func (p *poller) remove() {
 // Start - polling event
 func (p *poller) Start(timeout time.Duration) {
 	go waitShutdownEvent(p)
+	var prevSocket string
 
 	for {
 		p.Lock()
@@ -121,8 +122,12 @@ func (p *poller) Start(timeout time.Duration) {
 				logger.Critical("receive internal signal pair, terminate")
 				return
 			}
-			//fmt.Printf("zmq event: %v\n", zmqEvent)
-			p.eventChan <- zmqEvent
+
+			//de-duplicate polled events
+			if "" == prevSocket || prevSocket != zmqEvent.Socket.String() || 0 == len(p.eventChan) {
+				p.eventChan <- zmqEvent
+				prevSocket = zmqEvent.Socket.String()
+			}
 		}
 
 		p.remove()
