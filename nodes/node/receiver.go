@@ -17,16 +17,16 @@ import (
 )
 
 const (
-	assetCmdStr                      = "assets"
-	issueCmdStr                      = "issues"
-	transferCmdStr                   = "transfer"
-	blockCmdStr                      = "block"
-	heartbeatCmdStr                  = "heart"
-	checkTimeSecond                  = 60 * time.Second
-	receiveBroadcastIntervalInSecond = 60 * time.Second
-	heartbeatTimeoutSecond           = 140 * time.Second
-	eventChannelSize                 = 100
-	reconnectDelayMillisecond        = 10 * time.Millisecond
+	assetCmdStr               = "assets"
+	issueCmdStr               = "issues"
+	transferCmdStr            = "transfer"
+	blockCmdStr               = "block"
+	heartbeatCmdStr           = "heart"
+	checkTimeSecond           = 60 * time.Second
+	pollerTimeoutSecond       = 30 * time.Second
+	heartbeatTimeoutSecond    = 90 * time.Second
+	eventChannelSize          = 100
+	reconnectDelayMillisecond = 10 * time.Millisecond
 )
 
 func receiverLoop(n Node, rs recorders, id int) {
@@ -52,6 +52,7 @@ func receiverRoutine(n Node, rs recorders, id int) {
 	log := n.Log()
 	checkTimer := time.NewTimer(checkTimeSecond)
 	heartbeatTimer := time.NewTimer(heartbeatTimeoutSecond)
+	resetTimer := false
 	checked := false
 
 	poller, err := initialisePoller(n, id, eventChan)
@@ -60,19 +61,19 @@ func receiverRoutine(n Node, rs recorders, id int) {
 		return
 	}
 
-	go poller.Start(receiveBroadcastIntervalInSecond)
+	go poller.Start(pollerTimeoutSecond)
 
 	for {
 		log.Debug("waiting events...")
 		select {
 		case polled := <-eventChan:
-			data, err := polled.Socket.RecvMessageBytes(0)
+			data, err := polled.Socket.RecvMessageBytes(-1)
 			if nil != err {
 				log.Errorf("receive message with error: %s", err)
 				//error might comes from reopen socket, will behave normal after some retries
 				continue
 			}
-			process(n, rs, data, &checked, heartbeatTimer)
+			process(n, rs, data, &resetTimer, &checked)
 
 		case <-shutdownChan:
 			log.Infof("terminate receiver loop")
@@ -84,21 +85,43 @@ func receiverRoutine(n Node, rs recorders, id int) {
 
 		case <-heartbeatTimer.C:
 			log.Warn("heartbeat timeout exceed, reopen heartbeat socket")
-			poller.Remove(n.BroadcastReceiver())
-			err = n.BroadcastReceiver().Reconnect()
-			if nil != err {
-				log.Errorf("reconnect with error: %s, abort", err)
-				return
+			go reconnect(poller, n, heartbeatTimer)
+		}
+
+		if resetTimer {
+			log.Debug("reset timer")
+			log.Debug("reset heartbeat timeout timer")
+			if !heartbeatTimer.Stop() {
+				log.Debug("clear heartbeat timer channel")
+				<-heartbeatTimer.C
+				log.Debug("heartbeat timer channel cleared")
 			}
-			poller.Add(n.BroadcastReceiver(), zmq.POLLIN)
-			time.Sleep(reconnectDelayMillisecond)
-			heartbeatTimer.Reset(heartbeatTimeoutSecond)
+			ok := heartbeatTimer.Reset(heartbeatTimeoutSecond)
+			if ok {
+				resetTimer = false
+				log.Warn("heartbeat timer still active")
+			}
+			resetTimer = false
 		}
 	}
 }
 
+//sometimes not receives heartbeat for some time, then need to close the socket and open a new one
+func reconnect(poller network.Poller, n Node, heartbeatTimer *time.Timer) {
+	poller.Remove(n.BroadcastReceiver())
+	err := n.BroadcastReceiver().Reconnect()
+	if nil != err {
+		n.Log().Errorf("reconnect with error: %s, abort", err)
+		return
+	}
+	poller.Add(n.BroadcastReceiver(), zmq.POLLIN)
+	time.Sleep(reconnectDelayMillisecond)
+	heartbeatTimer.Reset(heartbeatTimeoutSecond)
+}
+
 func initialisePoller(n Node, id int, eventChan chan zmq.Polled) (network.Poller, error) {
-	poller, err := network.NewPoller(eventChan, shutdownChan, id)
+	pollerShutdownChan := make(chan struct{}, 1)
+	poller, err := network.NewPoller(eventChan, pollerShutdownChan, id)
 	if nil != err {
 		return nil, err
 	}
@@ -106,7 +129,7 @@ func initialisePoller(n Node, id int, eventChan chan zmq.Polled) (network.Poller
 	return poller, nil
 }
 
-func process(n Node, rs recorders, data [][]byte, checked *bool, heartbeatTimer *time.Timer) {
+func process(n Node, rs recorders, data [][]byte, resetTimer *bool, checked *bool) {
 	log := n.Log()
 	blockchain := string(data[0])
 	if !chain.Valid(blockchain) {
@@ -142,16 +165,18 @@ func process(n Node, rs recorders, data [][]byte, checked *bool, heartbeatTimer 
 	case heartbeatCmdStr:
 		log.Infof("receive heartbeat")
 		rs.heartbeat.Add(now)
-		log.Debug("reset heartbeat timeout timer")
-		if !heartbeatTimer.Stop() {
-			log.Debug("clear heartbeat timer channel")
-			<-heartbeatTimer.C
-			log.Debug("heartbeat timer channel cleared")
-		}
-		ok := heartbeatTimer.Reset(heartbeatTimeoutSecond)
-		if !ok {
-			log.Debug("heartbeat timer reset false")
-		}
+		*resetTimer = true
+
+		//log.Debug("reset heartbeat timeout timer")
+		//if !resetTimer.Stop() {
+		//	log.Debug("clear heartbeat timer channel")
+		//	<-resetTimer.C
+		//	log.Debug("heartbeat timer channel cleared")
+		//}
+		//ok := resetTimer.Reset(heartbeatTimeoutSecond)
+		//if ok {
+		//	log.Warn("heartbeat timer still active")
+		//}
 
 	default:
 		log.Debugf("receive %s", category)
