@@ -51,7 +51,7 @@ func neverReceive(h *HeartbeatSummary) string {
 	if maxReceivedCount < expectedCount {
 		expectedCount = maxReceivedCount
 	}
-	return fmt.Sprintf("not receiving heartbeat for %s, expect to receive %d, drop rate 100%", h.Duration, int(expectedCount))
+	return fmt.Sprintf("not receiving heartbeat for %s, expect to receive %d, drop rate 100%%", h.Duration, int(expectedCount))
 }
 
 func notReceivingForTwoHours(h *HeartbeatSummary) string {
