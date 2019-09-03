@@ -67,6 +67,7 @@ func receiverRoutine(n Node, rs recorders, id int) {
 		log.Debug("waiting events...")
 		select {
 		case polled := <-eventChan:
+			log.Infof("event channel length: %d", len(eventChan))
 			data, err := polled.Socket.RecvMessageBytes(-1)
 			if nil != err {
 				log.Errorf("receive message with error: %s", err)
@@ -85,7 +86,7 @@ func receiverRoutine(n Node, rs recorders, id int) {
 
 		case <-heartbeatTimer.C:
 			log.Warn("heartbeat timeout exceed, reopen heartbeat socket")
-			go reconnect(poller, n, heartbeatTimer)
+			reconnect(poller, n, heartbeatTimer)
 		}
 
 		if resetTimer {
