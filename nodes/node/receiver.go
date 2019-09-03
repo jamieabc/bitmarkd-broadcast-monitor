@@ -116,7 +116,7 @@ func reconnect(poller network.Poller, n Node, heartbeatTimer *time.Timer) {
 		n.Log().Errorf("reconnect with error: %s, abort", err)
 		return
 	}
-	log.Infof("adding heartbeat socket %s to poller", n.BroadcastReceiver().String)
+	log.Infof("adding heartbeat socket %s to poller", n.BroadcastReceiver().String())
 	poller.Add(n.BroadcastReceiver(), zmq.POLLIN)
 	time.Sleep(reconnectDelayMillisecond)
 	log.Debug("reset heartbeat timer")
