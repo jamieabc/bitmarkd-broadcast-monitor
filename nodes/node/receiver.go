@@ -85,7 +85,7 @@ func receiverRoutine(n Node, rs recorders, id int) {
 
 		case <-heartbeatTimer.C:
 			log.Warn("heartbeat timeout exceed, reopen heartbeat socket")
-			reconnect(poller, n, heartbeatTimer)
+			go reconnect(poller, n, heartbeatTimer)
 		}
 
 		if resetTimer {
