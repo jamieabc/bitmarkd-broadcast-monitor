@@ -89,7 +89,6 @@ func receiverRoutine(n Node, rs recorders, id int) {
 		}
 
 		if resetTimer {
-			log.Debug("reset timer")
 			log.Debug("reset heartbeat timeout timer")
 			if !heartbeatTimer.Stop() {
 				log.Debug("clear heartbeat timer channel")
