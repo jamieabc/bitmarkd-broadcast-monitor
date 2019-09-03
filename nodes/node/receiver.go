@@ -34,7 +34,7 @@ func receiverLoop(n Node, rs recorders, id int) {
 	timer := clock.NewClock()
 
 	go rs.heartbeat.RemoveOutdatedPeriodically(timer)
-	go rs.transaction.RemoveOutdatedPeriodically(timer)
+	//go rs.transaction.RemoveOutdatedPeriodically(timer)
 	go receiverRoutine(n, rs, id)
 
 	<-shutdownChan
@@ -156,11 +156,11 @@ func process(n Node, rs recorders, data [][]byte, resetTimer *bool, checked *boo
 			return
 		}
 		log.Infof("receive %s ID %s", category, []byte(fmt.Sprintf("%v", id)))
-		rs.transaction.Add(now, id)
-		if !*checked {
-			*checked = true
-			notifyChan <- struct{}{}
-		}
+		//rs.transaction.Add(now, id)
+		//if !*checked {
+		//	*checked = true
+		//	notifyChan <- struct{}{}
+		//}
 
 	case heartbeatCmdStr:
 		log.Infof("receive heartbeat")
