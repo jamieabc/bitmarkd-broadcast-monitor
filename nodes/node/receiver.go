@@ -26,7 +26,7 @@ const (
 	pollerTimeoutSecond       = 30 * time.Second
 	heartbeatTimeoutSecond    = 90 * time.Second
 	eventChannelSize          = 100
-	reconnectDelayMillisecond = 10 * time.Millisecond
+	reconnectDelayMillisecond = 20 * time.Millisecond
 )
 
 func receiverLoop(n Node, rs recorders, id int) {
@@ -107,15 +107,19 @@ func receiverRoutine(n Node, rs recorders, id int) {
 
 //sometimes not receives heartbeat for some time, then need to close the socket and open a new one
 func reconnect(poller network.Poller, n Node, heartbeatTimer *time.Timer) {
-	n.Log().Info("reconnecting heartbeat socket")
+	log := n.Log()
+
+	log.Info("closing heartbeat socket")
 	poller.Remove(n.BroadcastReceiver())
 	err := n.BroadcastReceiver().Reconnect()
 	if nil != err {
 		n.Log().Errorf("reconnect with error: %s, abort", err)
 		return
 	}
+	log.Infof("adding heartbeat socket %s to poller", n.BroadcastReceiver().String)
 	poller.Add(n.BroadcastReceiver(), zmq.POLLIN)
 	time.Sleep(reconnectDelayMillisecond)
+	log.Debug("reset heartbeat timer")
 	heartbeatTimer.Reset(heartbeatTimeoutSecond)
 }
 
