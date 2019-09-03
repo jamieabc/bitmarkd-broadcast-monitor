@@ -67,7 +67,6 @@ func receiverRoutine(n Node, rs recorders, id int) {
 		log.Debug("waiting events...")
 		select {
 		case polled := <-eventChan:
-			log.Infof("event channel length: %d", len(eventChan))
 			data, err := polled.Socket.RecvMessageBytes(-1)
 			if nil != err {
 				log.Errorf("receive message with error: %s", err)
