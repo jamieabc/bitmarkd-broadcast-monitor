@@ -107,6 +107,7 @@ func receiverRoutine(n Node, rs recorders, id int) {
 
 //sometimes not receives heartbeat for some time, then need to close the socket and open a new one
 func reconnect(poller network.Poller, n Node, heartbeatTimer *time.Timer) {
+	n.Log().Info("reconnecting heartbeat socket")
 	poller.Remove(n.BroadcastReceiver())
 	err := n.BroadcastReceiver().Reconnect()
 	if nil != err {
