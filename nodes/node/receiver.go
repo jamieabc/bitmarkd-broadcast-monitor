@@ -50,7 +50,6 @@ func receiverLoop(n Node, rs recorders, id int) {
 func receiverRoutine(n Node, rs recorders, id int) {
 	eventChan := make(chan zmq.Polled, eventChannelSize)
 	log := n.Log()
-	checkTimer := time.NewTimer(checkTimeSecond)
 	transactionTimer := time.NewTimer(heartbeatTimeoutSecond)
 	resetTimer := false
 
@@ -78,9 +77,6 @@ func receiverRoutine(n Node, rs recorders, id int) {
 		case <-shutdownChan:
 			log.Infof("terminate receiver loop")
 			return
-
-		case <-checkTimer.C:
-			checkTimer.Reset(checkTimeSecond)
 
 		case <-transactionTimer.C:
 			log.Warn("heartbeat timeout exceed, reopen connection")
