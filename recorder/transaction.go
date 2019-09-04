@@ -10,18 +10,17 @@ import (
 )
 
 const (
-	txArriveDelayTime = 1 * time.Minute
+	indexNotFound = -1
 )
 
 //this variable stores superset of all transactions
-var globalTransactions *transactions
 var shutdownChan <-chan struct{}
 
 type transactions struct {
 	sync.Mutex
-	data       map[string]expiredAt
-	received   bool
-	nextItemID int
+	data                  [totalReceivedCount]bool
+	firstItemReceivedTime time.Time
+	received              bool
 }
 
 //TransactionSummary - summary of received￿￿￿ transactions
@@ -48,68 +47,90 @@ func (t *TransactionSummary) String() string {
 func (t *transactions) Add(receivedTime time.Time, args ...interface{}) {
 	if !t.received {
 		t.received = true
+		t.firstItemReceivedTime = roundTimeToMinute(receivedTime)
 	}
 	t.add(receivedTime, args)
-	globalTransactions.add(receivedTime, args)
+}
+
+func roundTimeToMinute(source time.Time) time.Time {
+	return time.Date(source.Year(), source.Month(), source.Day(), source.Hour(), source.Minute(), 0, 0, source.Location())
 }
 
 func (t *transactions) add(receivedTime time.Time, args ...interface{}) {
-	txID := fmt.Sprintf("%v", args[0])
-	if t.isTxIDExist(txID) {
+	timeDiff := roundTimeToMinute(receivedTime).Sub(t.firstItemReceivedTime)
+	index := int(timeDiff / time.Minute)
+	if 0 > index || totalReceivedCount <= index {
 		return
 	}
 
-	t.Lock()
-	t.data[txID] = expiredAt(receivedTime.Add(txArriveDelayTime))
-	t.Unlock()
-}
-
-func (t *transactions) isTxIDExist(txID string) bool {
-	t.Lock()
-	_, ok := t.data[txID]
-	t.Unlock()
-
-	return ok
+	t.data[index] = true
 }
 
 //RemoveOutdatedPeriodically - clean expired transaction periodically
 func (t *transactions) RemoveOutdatedPeriodically(c clock.Clock) {
-	timer := c.After(expiredTimeInterval)
 loop:
 	for {
 		select {
 		case <-shutdownChan:
 			break loop
 
-		case <-timer:
+		case <-c.After(expiredTimeInterval):
 			cleanupExpiredTransaction(t)
-			timer = c.After(txArriveDelayTime)
 		}
 	}
 }
 
 func cleanupExpiredTransaction(t *transactions) {
-	now := time.Now()
+	if t.firstItemReceivedTime.After(time.Now().Add(-1 * expiredTimeInterval)) {
+		return
+	}
+
 	t.Lock()
 	defer t.Unlock()
-	for k, v := range t.data {
-		if now.After(time.Time(v)) {
-			delete(t.data, k)
+
+	firstItem := findNextReceivedItemIndex(t)
+
+	var tmpArray [totalReceivedCount]bool
+
+	if indexNotFound == firstItem {
+		t.firstItemReceivedTime = time.Time{}
+	} else {
+		copy(tmpArray[firstItem:], t.data[firstItem:])
+		t.firstItemReceivedTime = t.firstItemReceivedTime.Add(time.Duration(firstItem+1) * time.Minute)
+	}
+	t.data = tmpArray
+}
+
+//findNextReceivedItemIndex - find first item in the array its value is true
+//if nothing found, return indexNotFound(-1)
+func findNextReceivedItemIndex(t *transactions) int {
+	return findReceivedItemFromIndex(t, 1)
+}
+
+func findReceivedItemFromIndex(t *transactions, start int) int {
+	for i := start; i < len(t.data); i++ {
+		if t.data[i] {
+			return i
 		}
 	}
+	return indexNotFound
 }
 
 //Summary - summarize transactions info, mainly droprate
 func (t *transactions) Summary() interface{} {
-	globalCount := len(globalTransactions.data)
-	if 0 == globalCount {
+	if indexNotFound == findFirstReceivedItemIndex(t) {
+		droprate := float64(0)
+		if t.received {
+			droprate = float64(1)
+		}
 		return &TransactionSummary{
-			Droprate:      0,
+			Droprate:      droprate,
 			received:      t.received,
 			ReceivedCount: 0,
 		}
 	}
-	dropRate := float64(globalCount-len(t.data)) / float64(globalCount)
+
+	dropRate := (float64(totalReceivedCount) - receivedCountFromPrevTwoHour(t.data)) / float64(totalReceivedCount)
 	return &TransactionSummary{
 		Droprate:      dropRate,
 		received:      t.received,
@@ -117,15 +138,26 @@ func (t *transactions) Summary() interface{} {
 	}
 }
 
+func findFirstReceivedItemIndex(t *transactions) int {
+	return findReceivedItemFromIndex(t, 0)
+}
+
+func receivedCountFromPrevTwoHour(data [totalReceivedCount]bool) float64 {
+	count := float64(0)
+	for _, value := range data {
+		if value {
+			count++
+		}
+	}
+	return count
+}
+
 func initialiseTransactions(shutdown <-chan struct{}) {
-	globalTransactions = newTransaction()
 	shutdownChan = shutdown
 }
 
 func newTransaction() *transactions {
-	return &transactions{
-		data: make(map[string]expiredAt),
-	}
+	return &transactions{}
 }
 
 //NewTransaction - new transaction

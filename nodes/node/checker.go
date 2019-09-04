@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	checkInterval = 1 * time.Minute
-	measurement   = "heartbeat-droprate"
+	checkInterval = 2 * time.Minute
+	measurement   = "transaction-droprate"
 )
 
 func checkerLoop(n Node, rs recorders) {
@@ -24,19 +24,19 @@ func checkerLoop(n Node, rs recorders) {
 			return
 
 		case <-timer.C:
-			hs := rs.heartbeat.Summary().(*recorder.HeartbeatSummary)
-			//ts := rs.transaction.Summary().(*recorder.TransactionSummary)
+			//hs := rs.heartbeat.Summary().(*recorder.HeartbeatSummary)
+			ts := rs.transaction.Summary().(*recorder.TransactionSummary)
 
-			writeToInfluxDB(hs, n.Name())
+			writeToInfluxDB(ts, n.Name())
 
-			log.Infof("heartbeat summary: %s", hs)
-			//log.Infof("transaction summary: %s", ts)
+			//log.Infof("heartbeat summary: %s", hs)
+			log.Infof("transaction summary: %s", ts)
 			timer.Reset(checkInterval)
 		}
 	}
 }
 
-func writeToInfluxDB(sum *recorder.HeartbeatSummary, name string) {
+func writeToInfluxDB(sum *recorder.TransactionSummary, name string) {
 	db.Add(db.InfluxData{
 		Fields:      map[string]interface{}{"value": sum.Droprate},
 		Measurement: measurement,
