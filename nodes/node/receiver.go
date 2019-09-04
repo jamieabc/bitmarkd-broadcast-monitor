@@ -22,9 +22,8 @@ const (
 	transferCmdStr            = "transfer"
 	blockCmdStr               = "block"
 	heartbeatCmdStr           = "heart"
-	checkTimeSecond           = 60 * time.Second
 	pollerTimeoutSecond       = 30 * time.Second
-	heartbeatTimeoutSecond    = 90 * time.Second
+	transactionTimeoutSecond  = 120 * time.Second
 	eventChannelSize          = 100
 	reconnectDelayMillisecond = 20 * time.Millisecond
 )
@@ -50,8 +49,7 @@ func receiverLoop(n Node, rs recorders, id int) {
 func receiverRoutine(n Node, rs recorders, id int) {
 	eventChan := make(chan zmq.Polled, eventChannelSize)
 	log := n.Log()
-	transactionTimer := time.NewTimer(heartbeatTimeoutSecond)
-	resetTimer := false
+	transactionTimer := time.NewTimer(transactionTimeoutSecond)
 
 	poller, err := initialisePoller(n, id, eventChan)
 	if nil != err {
@@ -72,39 +70,30 @@ func receiverRoutine(n Node, rs recorders, id int) {
 				continue
 			}
 			process(n, rs, data)
-			resetTimer = true
+			if !transactionTimer.Stop() {
+				<-transactionTimer.C
+			}
+			ok := transactionTimer.Reset(transactionTimeoutSecond)
+			if ok {
+				log.Warn("transaction timer still active")
+			}
 
 		case <-shutdownChan:
 			log.Infof("terminate receiver loop")
 			return
 
 		case <-transactionTimer.C:
-			log.Warn("heartbeat timeout exceed, reopen connection")
+			log.Warn("transaction timeout exceed, reopen connection")
 			reconnect(poller, n, transactionTimer)
-		}
-
-		if resetTimer {
-			log.Debug("reset heartbeat timeout timer")
-			if !transactionTimer.Stop() {
-				log.Debug("clear heartbeat timer channel")
-				<-transactionTimer.C
-				log.Debug("heartbeat timer channel cleared")
-			}
-			ok := transactionTimer.Reset(heartbeatTimeoutSecond)
-			if ok {
-				resetTimer = false
-				log.Warn("heartbeat timer still active")
-			}
-			resetTimer = false
 		}
 	}
 }
 
-//sometimes not receives heartbeat for some time, then need to close the socket and open a new one
-func reconnect(poller network.Poller, n Node, heartbeatTimer *time.Timer) {
+//sometimes not receiving transaction for some time, then need to close the socket and open a new one
+func reconnect(poller network.Poller, n Node, transactionTimer *time.Timer) {
 	log := n.Log()
 
-	log.Info("closing heartbeat socket")
+	log.Info("closing broadcast receiver connection")
 	poller.Remove(n.BroadcastReceiver())
 	err := n.BroadcastReceiver().Reconnect()
 	if nil != err {
@@ -112,10 +101,10 @@ func reconnect(poller network.Poller, n Node, heartbeatTimer *time.Timer) {
 		return
 	}
 	time.Sleep(reconnectDelayMillisecond)
-	log.Infof("adding heartbeat socket %s to poller", n.BroadcastReceiver().String())
+	log.Infof("adding socket %s to poller", n.BroadcastReceiver().String())
 	poller.Add(n.BroadcastReceiver(), zmq.POLLIN)
-	log.Debug("reset heartbeat timer")
-	heartbeatTimer.Reset(heartbeatTimeoutSecond)
+	log.Debug("reset transaction timer")
+	transactionTimer.Reset(transactionTimeoutSecond)
 }
 
 func initialisePoller(n Node, id int, eventChan chan zmq.Polled) (network.Poller, error) {
