@@ -130,12 +130,28 @@ func (t *transactions) Summary() interface{} {
 		}
 	}
 
-	dropRate := (float64(totalReceivedCount) - receivedCountFromPrevTwoHour(t.data)) / float64(totalReceivedCount)
+	expectedCount := expectedCount(t)
+	receivedCount := receivedCountFromPrevTwoHour(t.data)
+	dropRate := float64(0)
+	if expectedCount > receivedCount {
+		dropRate = (expectedCount - receivedCount) / expectedCount
+	}
 	return &TransactionSummary{
 		Droprate:      dropRate,
 		received:      t.received,
-		ReceivedCount: len(t.data),
+		ReceivedCount: int(receivedCountFromPrevTwoHour(t.data)),
 	}
+}
+
+func expectedCount(t *transactions) float64 {
+	expectedCount := float64(time.Now().Sub(t.firstItemReceivedTime) / time.Minute)
+	if 0 == expectedCount {
+		return 1
+	}
+	if float64(totalReceivedCount) < expectedCount {
+		return float64(totalReceivedCount)
+	}
+	return expectedCount
 }
 
 func findFirstReceivedItemIndex(t *transactions) int {

@@ -70,13 +70,7 @@ func receiverRoutine(n Node, rs recorders, id int) {
 				continue
 			}
 			process(n, rs, data)
-			if !transactionTimer.Stop() {
-				<-transactionTimer.C
-			}
-			ok := transactionTimer.Reset(transactionTimeoutSecond)
-			if ok {
-				log.Warn("transaction timer still active")
-			}
+			resetTimer(transactionTimer, log)
 
 		case <-shutdownChan:
 			log.Infof("terminate receiver loop")
@@ -86,6 +80,17 @@ func receiverRoutine(n Node, rs recorders, id int) {
 			log.Warn("transaction timeout exceed, reopen connection")
 			reconnect(poller, n, transactionTimer)
 		}
+	}
+}
+
+func resetTimer(t *time.Timer, log *logger.L) {
+	log.Debug("reset transaction timer")
+	if !t.Stop() {
+		<-t.C
+	}
+	ok := t.Reset(transactionTimeoutSecond)
+	if ok {
+		log.Warn("transaction timer still active")
 	}
 }
 

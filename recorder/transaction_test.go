@@ -42,7 +42,7 @@ func TestSummaryWhenNoDrop(t *testing.T) {
 	r.Add(now, txID1)
 	summary := r.Summary().(*recorder.TransactionSummary)
 
-	assert.Equal(t, float64(120-1)/120, summary.Droprate, "wrong droprate")
+	assert.Equal(t, float64(0), summary.Droprate, "wrong droprate")
 }
 
 func TestTransactionCleanupPeriodicallyWhenExpiration(t *testing.T) {
@@ -76,20 +76,20 @@ func TestTransactionCleanupPeriodicallyWhenNoExpiration(t *testing.T) {
 	mock.EXPECT().After(gomock.Any()).Return(time.After(1)).Times(2)
 
 	now := time.Now()
+	nowTruncateToMinute := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), 0, 0, now.Location())
 	r := recorder.NewTransaction()
 
-	r.Add(now.Add(-2*time.Minute), txID1)
-	r.Add(now, txID2)
-	r.Add(now.Add(10*time.Second), txID1)
+	r.Add(nowTruncateToMinute.Add(-2*time.Minute), txID1)
+	r.Add(nowTruncateToMinute, txID2)
+	r.Add(nowTruncateToMinute.Add(10*time.Second), txID1)
 	summary := r.Summary().(*recorder.TransactionSummary)
-	droprate := float64(expectedTotalReceivedCount-2) / expectedTotalReceivedCount
 
-	assert.Equal(t, droprate, summary.Droprate, "wrong droprate")
+	assert.Equal(t, float64(0), summary.Droprate, "wrong droprate")
 
 	go r.RemoveOutdatedPeriodically(mock)
 	<-time.After(10 * time.Millisecond)
 	transactionShutdownChan <- struct{}{}
 	summary = r.Summary().(*recorder.TransactionSummary)
 
-	assert.Equal(t, droprate, summary.Droprate, "wrong droprate")
+	assert.Equal(t, float64(0), summary.Droprate, "wrong droprate")
 }
