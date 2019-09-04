@@ -18,6 +18,8 @@ type poller struct {
 	poll         *zmq.Poller
 	sockets      map[*zmq.Socket]zmq.State
 	shutdownChan <-chan struct{}
+	removeQueue  []Client
+	wg           sync.WaitGroup
 }
 
 const (
@@ -44,11 +46,14 @@ func NewPoller(eventChannel chan zmq.Polled, shutdownChannel <-chan struct{}, id
 		signalPair:   signalPair,
 		shutdownChan: shutdownChannel,
 		sockets:      make(map[*zmq.Socket]zmq.State),
+		removeQueue:  make([]Client, 0),
 	}, nil
 }
 
 // Add - add socket to poll
 func (p *poller) Add(client Client, events zmq.State) {
+	p.wg.Wait()
+
 	p.Lock()
 	defer p.Unlock()
 
@@ -68,20 +73,36 @@ func (p *poller) Add(client Client, events zmq.State) {
 	p.poll.Add(socket, events)
 }
 
-// remove a socket from a poll
+//Remove - queue a client to remove
 func (p *poller) Remove(client Client) {
-	socket := client.Socket()
 	p.Lock()
-	defer p.Unlock()
+	p.removeQueue = append(p.removeQueue, client)
+	p.wg.Add(1)
+	p.Unlock()
+}
 
-	// protect against duplicate remove
-	if _, ok := p.sockets[socket]; !ok {
+func (p *poller) remove() {
+	if 0 == len(p.removeQueue) {
 		return
 	}
 
-	// remove the socket
-	delete(p.sockets, socket)
-	_ = p.poll.RemoveBySocket(socket)
+	p.Lock()
+	for _, c := range p.removeQueue {
+		socket := c.Socket()
+
+		// protect against duplicate remove
+		if _, ok := p.sockets[socket]; !ok {
+			p.wg.Done()
+			continue
+		}
+
+		// remove the socket
+		delete(p.sockets, socket)
+		_ = p.poll.RemoveBySocket(socket)
+		p.wg.Done()
+	}
+	p.removeQueue = p.removeQueue[:0]
+	p.Unlock()
 }
 
 // Start - polling event
@@ -100,8 +121,13 @@ func (p *poller) Start(timeout time.Duration) {
 				logger.Critical("receive internal signal pair, terminate")
 				return
 			}
+
+			//de-duplicate polled events
 			p.eventChan <- zmqEvent
+			<-time.After(1 * time.Second)
 		}
+
+		p.remove()
 	}
 }
 
