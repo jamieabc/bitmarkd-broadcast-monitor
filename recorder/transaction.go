@@ -26,6 +26,7 @@ type transactions struct {
 //TransactionSummary - summary of received￿￿￿ transactions
 type TransactionSummary struct {
 	Droprate      float64
+	Duration      time.Duration
 	received      bool
 	ReceivedCount int
 }
@@ -40,7 +41,7 @@ func (t *TransactionSummary) String() string {
 	}
 
 	dropPercent := math.Floor(t.Droprate*10000) / 100
-	return fmt.Sprintf("earliest received to now got %d transactions, drop percent: %f%%", t.ReceivedCount, dropPercent)
+	return fmt.Sprintf("earliest received to now %s, got %d transactions, drop percent: %f%%", t.Duration, t.ReceivedCount, dropPercent)
 }
 
 //Add - Add transaction
@@ -124,9 +125,8 @@ func (t *transactions) Summary() interface{} {
 			droprate = float64(1)
 		}
 		return &TransactionSummary{
-			Droprate:      droprate,
-			received:      t.received,
-			ReceivedCount: 0,
+			Droprate: droprate,
+			received: t.received,
 		}
 	}
 
@@ -138,6 +138,7 @@ func (t *transactions) Summary() interface{} {
 	}
 	return &TransactionSummary{
 		Droprate:      dropRate,
+		Duration:      time.Now().Sub(t.firstItemReceivedTime),
 		received:      t.received,
 		ReceivedCount: int(receivedCountFromPrevTwoHour(t.data)),
 	}
