@@ -267,6 +267,7 @@ func (client *client) reopenSocket() (*zmq.Socket, error) {
 	if nil != err {
 		return nil, err
 	}
+	<-time.After(20 * time.Millisecond)
 	err = client.openSocket()
 	if nil != err {
 		return nil, err

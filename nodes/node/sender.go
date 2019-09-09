@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	checkIntervalSecond = 2 * time.Minute
+	checkIntervalSecond = 5 * time.Minute
 )
 
 func senderLoop(n Node) {
