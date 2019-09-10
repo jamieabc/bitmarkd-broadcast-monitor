@@ -115,3 +115,17 @@ func TestBlocksRemoveOutdatedPeriodicallyWhenManyExpiration(t *testing.T) {
 	assert.True(t, s.Duration <= 2*time.Hour, "wrong larger duration")
 	assert.True(t, s.Duration >= 119*time.Minute, "wrong smaller duration")
 }
+
+func TestSummaryWhenFork(t *testing.T) {
+	b := recorder.NewBlocks()
+	now := time.Now()
+	blockNumber := uint64(1000)
+	b.Add(now, blockNumber, "123456")
+	b.Add(now, blockNumber, "654321")
+
+	summary := b.Summary().(recorder.BlocksSummary)
+	assert.True(t, summary.Duration <= time.Second, "wrong duration")
+	assert.Equal(t, 1, len(summary.Forks), "wrong fork count")
+	assert.Equal(t, blockNumber, summary.Forks[0].Begin, "wrong fork start")
+	assert.Equal(t, blockNumber, summary.Forks[0].End, "wrong fork end")
+}

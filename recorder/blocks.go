@@ -20,24 +20,60 @@ type block struct {
 
 func (b block) isEmpty() bool {
 	return uint64(0) == b.number || "" == b.hash
+
 }
 
 type blocks struct {
 	sync.Mutex
 	data [dataLength]block
-	id   int
+
+	latestBlock block
+	id          int
 }
 
 // Add - add block item
 func (b *blocks) Add(t time.Time, args ...interface{}) {
-	number := args[0].(uint64)
-	hash := args[1].(string)
-	b.data[b.id] = block{
+	nextBlock := newBlock(t, args)
+	if isFork(b, nextBlock) {
+		_ = updateForkInfo(b, nextBlock)
+	}
+	b.addBlock(nextBlock)
+	b.updateLatestBlock(nextBlock)
+}
+
+func newBlock(t time.Time, args []interface{}) block {
+	number, hash := parseBlockArguments(args)
+	return block{
 		hash:         hash,
 		number:       number,
 		receivedTime: t,
 	}
+}
+
+func parseBlockArguments(args []interface{}) (uint64, string) {
+	number := args[0].(uint64)
+	hash := args[1].(string)
+	return number, hash
+}
+
+func (b *blocks) addBlock(nextBlock block) {
+	b.data[b.id] = nextBlock
 	nextID(b)
+}
+
+// each block number should appear only once
+func isFork(b *blocks, nextBlock block) bool {
+	return b.latestBlock.number >= nextBlock.number
+}
+
+func updateForkInfo(b *blocks, nextBlock block) error {
+	return nil
+}
+
+func (b *blocks) updateLatestBlock(nextBlock block) {
+	if nextBlock.number >= b.latestBlock.number {
+		b.latestBlock = nextBlock
+	}
 }
 
 func nextID(b *blocks) {
