@@ -19,6 +19,7 @@ type receivedAt time.Time
 const (
 	expiredTimeInterval = 2 * time.Hour
 	totalReceivedCount  = int(expiredTimeInterval / time.Minute)
+	indexNotFound       = -1
 )
 
 var (
