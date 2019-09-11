@@ -108,7 +108,7 @@ func processForkStart(b *blocks, nextBlock block) {
 	b.forks = append(b.forks, fork{
 		Begin:     nextBlock.number,
 		End:       b.latestBlock.number,
-		ExpiredAt: b.latestBlock.receivedTime.Add(expiredTimeInterval),
+		ExpiredAt: nextBlock.receivedTime.Add(expiredTimeInterval),
 	})
 }
 
