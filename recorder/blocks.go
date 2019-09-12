@@ -137,8 +137,9 @@ func (b *blocks) updateLatestBlock(nextBlock block) {
 func nextID(b *blocks) {
 	if dataLength-1 == b.id {
 		b.id = 0
+	} else {
+		b.id++
 	}
-	b.id++
 }
 
 // RemoveOutdatedPeriodically - remove outdated item
@@ -200,18 +201,31 @@ func cleanupExpiredForks(b *blocks, now time.Time) {
 
 // Summary - summarize blocks stat
 func (b *blocks) Summary() interface{} {
+	duration, startBlock, endBlock := summarize(b)
 	return &BlocksSummary{
-		Duration: findDuration(b),
-		Forks:    b.forks,
+		BlockCount: countBlock(startBlock, endBlock),
+		Duration:   duration,
+		Forks:      b.forks,
 	}
 }
 
-func findDuration(b *blocks) time.Duration {
+func countBlock(startBlock uint64, endBlock uint64) uint64 {
+	if 0 == startBlock && 0 == endBlock {
+		return uint64(0)
+	} else if 0 == endBlock {
+		return uint64(1)
+	} else {
+		return endBlock - startBlock + 1
+	}
+}
+
+func summarize(b *blocks) (time.Duration, uint64, uint64) {
 	if (time.Time{}) == b.data[0].receivedTime {
-		return time.Duration(0)
+		return time.Duration(0), uint64(0), uint64(0)
 	}
 
 	earliestTime := b.data[0].receivedTime
+	var index int
 	for i := 0; i < dataLength; i++ {
 		t := b.data[i].receivedTime
 		if (time.Time{}) == t {
@@ -219,20 +233,29 @@ func findDuration(b *blocks) time.Duration {
 		}
 		if earliestTime.After(t) {
 			earliestTime = t
+			index = i
 			continue
 		}
 	}
-	return time.Now().Sub(earliestTime)
+
+	var endBlock uint64
+	if 0 == index {
+		endBlock = b.data[dataLength-1].number
+	} else {
+		endBlock = b.data[index-1].number
+	}
+	return time.Now().Sub(earliestTime), b.data[index].number, endBlock
 }
 
 // BlocksSummary - block summary data structure
 type BlocksSummary struct {
-	Duration time.Duration
-	Forks    []fork
+	BlockCount uint64
+	Duration   time.Duration
+	Forks      []fork
 }
 
 func (b *BlocksSummary) String() string {
-	return fmt.Sprintf("duration %s, forks: %d", b.Duration, len(b.Forks))
+	return fmt.Sprintf("receive %d blolcks in %s, forks: %d", b.BlockCount, b.Duration, len(b.Forks))
 }
 
 // NewBlock - new blocks data structure

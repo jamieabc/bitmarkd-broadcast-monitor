@@ -27,6 +27,7 @@ func TestBlocksSummaryWhenOneRecord(t *testing.T) {
 	s := b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, s.Duration >= duration, "wrong duration")
 	assert.Equal(t, 0, len(s.Forks), "wrong fork count")
+	assert.Equal(t, uint64(1), s.BlockCount, "wrong block count")
 }
 
 func TestBlocksSummaryWhenCycleRecords(t *testing.T) {
@@ -34,15 +35,16 @@ func TestBlocksSummaryWhenCycleRecords(t *testing.T) {
 	b := recorder.NewBlock()
 	count := 300
 	for i := 0; i < count; i++ {
-		b.Add(now.Add(time.Duration(-1*i)*time.Second), uint64(i), strconv.Itoa(i))
+		b.Add(now.Add(time.Duration(-1*count+i)*time.Second), uint64(i), strconv.Itoa(i))
 	}
 	s := b.Summary().(*recorder.BlocksSummary)
 	assert.True(
 		t,
-		s.Duration >= (time.Duration(count-1)*time.Second),
+		s.Duration >= 100*time.Second,
 		"wrong duration",
 	)
 	assert.Equal(t, 0, len(s.Forks), "wrong fork count")
+	assert.Equal(t, uint64(100), s.BlockCount, "wrong block count")
 }
 
 func TestBlocksRemoveOutdatedPeriodicallyWhenNoExpiration(t *testing.T) {
