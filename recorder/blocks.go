@@ -235,8 +235,8 @@ func (b *BlocksSummary) String() string {
 	return fmt.Sprintf("duration %s, forks: %d", b.Duration, len(b.Forks))
 }
 
-// NewBlocks - new blocks data structure
-func NewBlocks() Recorder {
+// NewBlock - new blocks data structure
+func NewBlock() Recorder {
 	return &blocks{
 		forks: make([]fork, 0),
 	}

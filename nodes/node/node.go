@@ -26,15 +26,17 @@ type Node interface {
 type recorders struct {
 	heartbeat   recorder.Recorder
 	transaction recorder.Recorder
+	block       recorder.Recorder
 }
 
 type node struct {
-	remote              Remote
+	blockRecorder       recorder.Recorder
 	config              configuration.NodeConfig
 	heartbeatRecorder   recorder.Recorder
 	id                  int
 	log                 *logger.L
 	name                string
+	remote              Remote
 	transactionRecorder recorder.Recorder
 }
 
@@ -61,6 +63,7 @@ func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int, 
 	log := logger.New(config.Name)
 
 	n := &node{
+		blockRecorder:       recorder.NewBlock(),
 		config:              config,
 		heartbeatRecorder:   recorder.NewHeartbeat(float64(heartbeatIntervalSecond), shutdownChan),
 		id:                  idx,
@@ -146,6 +149,7 @@ func (n *node) Monitor() {
 	rs := recorders{
 		heartbeat:   n.heartbeatRecorder,
 		transaction: n.transactionRecorder,
+		block:       n.blockRecorder,
 	}
 
 	n.log.Info("start to monitor")

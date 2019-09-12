@@ -12,7 +12,7 @@ import (
 )
 
 func TestBlocksSummaryWhenEmpty(t *testing.T) {
-	b := recorder.NewBlocks()
+	b := recorder.NewBlock()
 	s := b.Summary().(recorder.BlocksSummary)
 
 	assert.Equal(t, time.Duration(0), s.Duration, "wrong duration")
@@ -21,7 +21,7 @@ func TestBlocksSummaryWhenEmpty(t *testing.T) {
 
 func TestBlocksSummaryWhenOneRecord(t *testing.T) {
 	now := time.Now()
-	b := recorder.NewBlocks()
+	b := recorder.NewBlock()
 	duration := 5 * time.Second
 	b.Add(now.Add(-1*duration), uint64(1000), "12345678")
 	s := b.Summary().(recorder.BlocksSummary)
@@ -31,7 +31,7 @@ func TestBlocksSummaryWhenOneRecord(t *testing.T) {
 
 func TestBlocksSummaryWhenCycleRecords(t *testing.T) {
 	now := time.Now()
-	b := recorder.NewBlocks()
+	b := recorder.NewBlock()
 	count := 300
 	for i := 0; i < count; i++ {
 		b.Add(now.Add(time.Duration(-1*i)*time.Second), uint64(i), strconv.Itoa(i))
@@ -53,7 +53,7 @@ func TestBlocksRemoveOutdatedPeriodicallyWhenNoExpiration(t *testing.T) {
 	mock.EXPECT().NewTimer(gomock.Any()).Return(time.NewTimer(1)).Times(1)
 
 	now := time.Now()
-	b := recorder.NewBlocks()
+	b := recorder.NewBlock()
 	duration := 10 * time.Minute
 
 	b.Add(now.Add(-1*duration), uint64(1000), "123456")
@@ -77,7 +77,7 @@ func TestBlocksRemoveOutdatedPeriodicallyWhenOneExpiration(t *testing.T) {
 	mock.EXPECT().NewTimer(gomock.Any()).Return(time.NewTimer(1)).Times(1)
 
 	now := time.Now()
-	b := recorder.NewBlocks()
+	b := recorder.NewBlock()
 	b.Add(now.Add(-3*time.Hour), uint64(1000), "123456")
 	b.Add(now.Add(-2*time.Second), uint64(1001), "654321")
 	s := b.Summary().(recorder.BlocksSummary)
@@ -100,7 +100,7 @@ func TestBlocksRemoveOutdatedPeriodicallyWhenManyExpiration(t *testing.T) {
 	mock.EXPECT().NewTimer(gomock.Any()).Return(time.NewTimer(1)).Times(1)
 
 	now := time.Now()
-	b := recorder.NewBlocks()
+	b := recorder.NewBlock()
 	for i := 0; i < 200; i++ {
 		b.Add(now.Add(time.Duration(-1*i)*time.Minute), uint64(i), strconv.Itoa(i))
 	}
@@ -117,7 +117,7 @@ func TestBlocksRemoveOutdatedPeriodicallyWhenManyExpiration(t *testing.T) {
 }
 
 func TestSummaryWhenForkSingleBlock(t *testing.T) {
-	b := recorder.NewBlocks()
+	b := recorder.NewBlock()
 	now := time.Now()
 	blockNumber := uint64(1000)
 	b.Add(now, blockNumber, "123456")
@@ -131,7 +131,7 @@ func TestSummaryWhenForkSingleBlock(t *testing.T) {
 }
 
 func TestSummaryWhenForkMultipleBlocks(t *testing.T) {
-	b := recorder.NewBlocks()
+	b := recorder.NewBlock()
 	now := time.Now()
 	blockNumber := uint64(1000)
 	b.Add(now, blockNumber, "1")
@@ -151,7 +151,7 @@ func TestSummaryWhenForkMultipleBlocks(t *testing.T) {
 }
 
 func TestSummaryWhenForkMultipleBlocksMultipleTimes(t *testing.T) {
-	b := recorder.NewBlocks()
+	b := recorder.NewBlock()
 	now := time.Now()
 	blockNumber := uint64(1000)
 	b.Add(now, blockNumber, "1")
@@ -177,7 +177,7 @@ func TestSummaryWhenForkMultipleBlocksMultipleTimes(t *testing.T) {
 }
 
 func TestSummaryWhenForkInProgressAndDropOneBlock(t *testing.T) {
-	b := recorder.NewBlocks()
+	b := recorder.NewBlock()
 	now := time.Now()
 	blockNumber := uint64(1000)
 	b.Add(now, blockNumber, "1")
@@ -201,7 +201,7 @@ func TestSummaryWhenForkBlockRecycledEntirely(t *testing.T) {
 	defer ctl.Finish()
 	mock.EXPECT().NewTimer(gomock.Any()).Return(time.NewTimer(1)).Times(1)
 
-	b := recorder.NewBlocks()
+	b := recorder.NewBlock()
 	now := time.Now()
 	threeHourBefore := now.Add(-3 * time.Hour)
 	blockNumber := uint64(1000)
@@ -237,7 +237,7 @@ func TestSummaryWhenForkBlockRecycledPartially(t *testing.T) {
 	mock.EXPECT().NewTimer(gomock.Any()).Return(time.NewTimer(1)).Times(1)
 
 	now := time.Now()
-	b := recorder.NewBlocks()
+	b := recorder.NewBlock()
 	threeHourBefore := now.Add(-3 * time.Hour)
 	blockNumber := uint64(1000)
 

@@ -34,6 +34,7 @@ func receiverLoop(n Node, rs recorders, id int) {
 
 	//go rs.heartbeat.RemoveOutdatedPeriodically(timer)
 	go rs.transaction.RemoveOutdatedPeriodically(timer)
+	go rs.block.RemoveOutdatedPeriodically(timer)
 	go receiverRoutine(n, rs, id)
 
 	<-shutdownChan
@@ -138,7 +139,8 @@ func process(n Node, rs recorders, data [][]byte) {
 			log.Errorf("extract block header with error: %s", err)
 			return
 		}
-		log.Infof("receive block, number: %d, digest: %s", header.Number, digest)
+		log.Infof("receive block %d, digest %s", header.Number, digest)
+		rs.block.Add(now, header.Number, digest.String())
 
 	case assetCmdStr, issueCmdStr, transferCmdStr:
 		bytes := data[2]
@@ -156,7 +158,6 @@ func process(n Node, rs recorders, data [][]byte) {
 	default:
 		log.Debugf("receive %s", category)
 	}
-
 	rs.transaction.Add(now)
 }
 
