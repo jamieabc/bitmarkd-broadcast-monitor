@@ -26,12 +26,10 @@ func checkerLoop(n Node, rs recorders) {
 			return
 
 		case <-transactionTimer.C:
-			//hs := rs.heartbeat.Summary().(*recorder.HeartbeatSummary)
 			ts := rs.transaction.Summary().(*recorder.TransactionSummary)
 
 			writeToInfluxDB(ts, n.Name())
 
-			//log.Infof("heartbeat summary: %s", hs)
 			log.Infof("transaction summary: %s", ts)
 			transactionTimer.Reset(transactionCheckMinute)
 

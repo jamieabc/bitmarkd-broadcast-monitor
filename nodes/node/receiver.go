@@ -32,7 +32,6 @@ func receiverLoop(n Node, rs recorders, id int) {
 	log := n.Log()
 	timer := clock.NewClock()
 
-	//go rs.heartbeat.RemoveOutdatedPeriodically(timer)
 	go rs.transaction.RemoveOutdatedPeriodically(timer)
 	go rs.block.RemoveOutdatedPeriodically(timer)
 	go receiverRoutine(n, rs, id)
