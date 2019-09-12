@@ -13,7 +13,7 @@ import (
 
 func TestBlocksSummaryWhenEmpty(t *testing.T) {
 	b := recorder.NewBlock()
-	s := b.Summary().(recorder.BlocksSummary)
+	s := b.Summary().(*recorder.BlocksSummary)
 
 	assert.Equal(t, time.Duration(0), s.Duration, "wrong duration")
 	assert.Equal(t, 0, len(s.Forks), "wrong fork count")
@@ -24,7 +24,7 @@ func TestBlocksSummaryWhenOneRecord(t *testing.T) {
 	b := recorder.NewBlock()
 	duration := 5 * time.Second
 	b.Add(now.Add(-1*duration), uint64(1000), "12345678")
-	s := b.Summary().(recorder.BlocksSummary)
+	s := b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, s.Duration >= duration, "wrong duration")
 	assert.Equal(t, 0, len(s.Forks), "wrong fork count")
 }
@@ -36,7 +36,7 @@ func TestBlocksSummaryWhenCycleRecords(t *testing.T) {
 	for i := 0; i < count; i++ {
 		b.Add(now.Add(time.Duration(-1*i)*time.Second), uint64(i), strconv.Itoa(i))
 	}
-	s := b.Summary().(recorder.BlocksSummary)
+	s := b.Summary().(*recorder.BlocksSummary)
 	assert.True(
 		t,
 		s.Duration >= (time.Duration(count-1)*time.Second),
@@ -58,14 +58,14 @@ func TestBlocksRemoveOutdatedPeriodicallyWhenNoExpiration(t *testing.T) {
 
 	b.Add(now.Add(-1*duration), uint64(1000), "123456")
 	b.Add(now.Add(-5*time.Minute), uint64(1001), "654321")
-	s := b.Summary().(recorder.BlocksSummary)
+	s := b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, s.Duration >= duration, "wrong duration")
 
 	go b.RemoveOutdatedPeriodically(mock)
 	<-time.After(10 * time.Millisecond)
 	shutdownChan <- struct{}{}
 
-	s = b.Summary().(recorder.BlocksSummary)
+	s = b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, s.Duration >= duration, "wrong duration")
 }
 
@@ -80,14 +80,14 @@ func TestBlocksRemoveOutdatedPeriodicallyWhenOneExpiration(t *testing.T) {
 	b := recorder.NewBlock()
 	b.Add(now.Add(-3*time.Hour), uint64(1000), "123456")
 	b.Add(now.Add(-2*time.Second), uint64(1001), "654321")
-	s := b.Summary().(recorder.BlocksSummary)
+	s := b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, s.Duration >= 2*time.Hour, "wrong duration")
 
 	go b.RemoveOutdatedPeriodically(mock)
 	<-time.After(10 * time.Millisecond)
 	shutdownChan <- struct{}{}
 
-	s = b.Summary().(recorder.BlocksSummary)
+	s = b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, s.Duration >= 2*time.Second, "wrong smaller duration")
 	assert.True(t, s.Duration < 2*time.Hour, "wrong larger duration")
 }
@@ -104,14 +104,14 @@ func TestBlocksRemoveOutdatedPeriodicallyWhenManyExpiration(t *testing.T) {
 	for i := 0; i < 200; i++ {
 		b.Add(now.Add(time.Duration(-1*i)*time.Minute), uint64(i), strconv.Itoa(i))
 	}
-	s := b.Summary().(recorder.BlocksSummary)
+	s := b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, s.Duration >= 3*time.Hour, "wrong duration")
 
 	go b.RemoveOutdatedPeriodically(mock)
 	<-time.After(10 * time.Millisecond)
 	shutdownChan <- struct{}{}
 
-	s = b.Summary().(recorder.BlocksSummary)
+	s = b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, s.Duration <= 2*time.Hour, "wrong larger duration")
 	assert.True(t, s.Duration >= 119*time.Minute, "wrong smaller duration")
 }
@@ -123,7 +123,7 @@ func TestSummaryWhenForkSingleBlock(t *testing.T) {
 	b.Add(now, blockNumber, "123456")
 	b.Add(now, blockNumber, "654321")
 
-	summary := b.Summary().(recorder.BlocksSummary)
+	summary := b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, summary.Duration <= time.Second, "wrong duration")
 	assert.Equal(t, 1, len(summary.Forks), "wrong fork count")
 	assert.Equal(t, blockNumber, summary.Forks[0].Begin, "wrong fork start")
@@ -143,7 +143,7 @@ func TestSummaryWhenForkMultipleBlocks(t *testing.T) {
 	b.Add(now, blockNumber+4, "7")
 	b.Add(now, blockNumber+5, "8")
 
-	summary := b.Summary().(recorder.BlocksSummary)
+	summary := b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, summary.Duration <= time.Second, "wrong duration")
 	assert.Equal(t, 1, len(summary.Forks), "wrong fork count")
 	assert.Equal(t, blockNumber+3, summary.Forks[0].Begin, "wrong fork start")
@@ -167,7 +167,7 @@ func TestSummaryWhenForkMultipleBlocksMultipleTimes(t *testing.T) {
 	b.Add(now, blockNumber+6, "11")
 	b.Add(now, blockNumber+7, "12")
 
-	summary := b.Summary().(recorder.BlocksSummary)
+	summary := b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, summary.Duration <= time.Second, "wrong duration")
 	assert.Equal(t, 2, len(summary.Forks), "wrong fork count")
 	assert.Equal(t, blockNumber+3, summary.Forks[0].Begin, "wrong fork start")
@@ -188,7 +188,7 @@ func TestSummaryWhenForkInProgressAndDropOneBlock(t *testing.T) {
 	b.Add(now, blockNumber+3, "6")
 	b.Add(now, blockNumber+5, "8")
 
-	summary := b.Summary().(recorder.BlocksSummary)
+	summary := b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, summary.Duration <= time.Second, "wrong duration")
 	assert.Equal(t, 1, len(summary.Forks), "wrong fork count")
 	assert.Equal(t, blockNumber+3, summary.Forks[0].Begin, "wrong fork start")
@@ -223,7 +223,7 @@ func TestSummaryWhenForkBlockRecycledEntirely(t *testing.T) {
 	<-time.After(10 * time.Millisecond)
 	shutdownChan <- struct{}{}
 
-	summary := b.Summary().(recorder.BlocksSummary)
+	summary := b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, summary.Duration <= time.Second, "wrong duration")
 	assert.Equal(t, 1, len(summary.Forks), "wrong fork count")
 	assert.Equal(t, blockNumber+6, summary.Forks[0].Begin, "wrong fork start")
@@ -254,7 +254,7 @@ func TestSummaryWhenForkBlockRecycledPartially(t *testing.T) {
 	<-time.After(10 * time.Millisecond)
 	shutdownChan <- struct{}{}
 
-	summary := b.Summary().(recorder.BlocksSummary)
+	summary := b.Summary().(*recorder.BlocksSummary)
 	assert.Equal(t, 1, len(summary.Forks), "wrong fork count")
 	assert.Equal(t, blockNumber+3, summary.Forks[0].Begin, "wrong fork start")
 	assert.Equal(t, blockNumber+4, summary.Forks[0].End, "wrong fork start")

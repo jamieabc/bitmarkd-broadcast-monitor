@@ -200,7 +200,7 @@ func cleanupExpiredForks(b *blocks, now time.Time) {
 
 // Summary - summarize blocks stat
 func (b *blocks) Summary() interface{} {
-	return BlocksSummary{
+	return &BlocksSummary{
 		Duration: findDuration(b),
 		Forks:    b.forks,
 	}
