@@ -250,9 +250,6 @@ func summarize(b *blocks) (time.Duration, uint64, uint64) {
 	return time.Now().Sub(earliestTime), b.data[index].number, endBlockNumber
 }
 
-//func endBlockNumber(b b) {
-//}
-
 func nextBlockNumber(b [dataLength]block, index int) uint64 {
 	nextBlockID := index + 1
 	if dataLength-1 == index {
