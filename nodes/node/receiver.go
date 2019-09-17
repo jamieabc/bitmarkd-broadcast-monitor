@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/recorder"
+
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
 
 	"github.com/bitmark-inc/bitmarkd/chain"
@@ -139,7 +141,11 @@ func process(n Node, rs recorders, data [][]byte) {
 			return
 		}
 		log.Infof("receive block %d, digest %s", header.Number, digest)
-		rs.block.Add(now, header.Number, digest.String())
+		rs.block.Add(now, recorder.BlockData{
+			Hash:         digest.String(),
+			Number:       header.Number,
+			GenerateTime: time.Unix(int64(header.Timestamp), 0),
+		})
 
 	case assetCmdStr, issueCmdStr, transferCmdStr:
 		bytes := data[2]
@@ -149,7 +155,7 @@ func process(n Node, rs recorders, data [][]byte) {
 		if nil != err {
 			return
 		}
-		log.Infof("receive %s ID %s", category, []byte(fmt.Sprintf("%v", id)))
+		log.Infof("receive %s broadcast, ID %s", category, []byte(fmt.Sprintf("%v", id)))
 
 	case heartbeatCmdStr:
 		log.Infof("receive heartbeat")
