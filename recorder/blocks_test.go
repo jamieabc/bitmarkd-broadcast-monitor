@@ -19,18 +19,19 @@ func TestBlocksSummaryWhenEmpty(t *testing.T) {
 	assert.Equal(t, 0, len(s.Forks), "wrong fork count")
 }
 
-func TestBlocksSummaryWhenOneRecord(t *testing.T) {
+func TestBlocksSummaryWhenNoCycle(t *testing.T) {
 	now := time.Now()
 	b := recorder.NewBlock()
 	duration := 5 * time.Second
-	b.Add(now.Add(-1*duration), uint64(1000), "12345678")
+	b.Add(now.Add(-2*duration), uint64(1000), "9999999")
+	b.Add(now.Add(-1*duration), uint64(1001), "12345678")
 	s := b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, s.Duration >= duration, "wrong duration")
 	assert.Equal(t, 0, len(s.Forks), "wrong fork count")
-	assert.Equal(t, uint64(1), s.BlockCount, "wrong block count")
+	assert.Equal(t, uint64(2), s.BlockCount, "wrong block count")
 }
 
-func TestBlocksSummaryWhenCycleRecords(t *testing.T) {
+func TestBlocksSummaryWhenCycle(t *testing.T) {
 	now := time.Now()
 	b := recorder.NewBlock()
 	count := 300

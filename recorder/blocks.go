@@ -238,13 +238,35 @@ func summarize(b *blocks) (time.Duration, uint64, uint64) {
 		}
 	}
 
-	var endBlock uint64
-	if 0 == index {
-		endBlock = b.data[dataLength-1].number
+	// in case array is not fully filled, need to check previous block
+	prevBlockNumber := prevBlockNumber(b.data, index)
+	nextBlockNumber := nextBlockNumber(b.data, index)
+	var endBlockNumber uint64
+	if prevBlockNumber >= nextBlockNumber {
+		endBlockNumber = prevBlockNumber
 	} else {
-		endBlock = b.data[index-1].number
+		endBlockNumber = nextBlockNumber
 	}
-	return time.Now().Sub(earliestTime), b.data[index].number, endBlock
+	return time.Now().Sub(earliestTime), b.data[index].number, endBlockNumber
+}
+
+//func endBlockNumber(b b) {
+//}
+
+func nextBlockNumber(b [dataLength]block, index int) uint64 {
+	nextBlockID := index + 1
+	if dataLength-1 == index {
+		nextBlockID = 0
+	}
+	return b[nextBlockID].number
+}
+
+func prevBlockNumber(b [dataLength]block, index int) uint64 {
+	prevBlockID := index - 1
+	if 0 == index {
+		prevBlockID = dataLength - 1
+	}
+	return b[prevBlockID].number
 }
 
 // BlocksSummary - block summary data structure
