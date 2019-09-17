@@ -9,13 +9,15 @@ import (
 )
 
 const (
-	checkInterval = 2 * time.Minute
-	measurement   = "transaction-droprate"
+	transactionCheckMinute = 2 * time.Minute
+	blockCheckMinute       = 2 * time.Minute
+	measurement            = "transaction-droprate"
 )
 
 func checkerLoop(n Node, rs recorders) {
 	log := n.Log()
-	timer := time.NewTimer(checkInterval)
+	transactionTimer := time.NewTimer(transactionCheckMinute)
+	blockTimer := time.NewTimer(blockCheckMinute)
 
 	for {
 		select {
@@ -23,15 +25,18 @@ func checkerLoop(n Node, rs recorders) {
 			log.Info("terminate checker loop")
 			return
 
-		case <-timer.C:
-			//hs := rs.heartbeat.Summary().(*recorder.HeartbeatSummary)
+		case <-transactionTimer.C:
 			ts := rs.transaction.Summary().(*recorder.TransactionSummary)
 
 			writeToInfluxDB(ts, n.Name())
 
-			//log.Infof("heartbeat summary: %s", hs)
 			log.Infof("transaction summary: %s", ts)
-			timer.Reset(checkInterval)
+			transactionTimer.Reset(transactionCheckMinute)
+
+		case <-blockTimer.C:
+			bs := rs.block.Summary().(*recorder.BlocksSummary)
+			log.Infof("block summary: %s", bs)
+			blockTimer.Reset(blockCheckMinute)
 		}
 	}
 }

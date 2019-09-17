@@ -9,11 +9,7 @@ import (
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/clock"
 )
 
-const (
-	indexNotFound = -1
-)
-
-//this variable stores superset of all transactions
+// this variable stores superset of all transactions
 var shutdownChan <-chan struct{}
 
 type transactions struct {
@@ -23,7 +19,7 @@ type transactions struct {
 	received              bool
 }
 
-//TransactionSummary - summary of received￿￿￿ transactions
+// TransactionSummary - summary of received￿￿￿ transactions
 type TransactionSummary struct {
 	Droprate      float64
 	Duration      time.Duration
@@ -44,7 +40,7 @@ func (t *TransactionSummary) String() string {
 	return fmt.Sprintf("earliest received to now %s, got %d transactions, drop percent: %f%%", t.Duration, t.ReceivedCount, dropPercent)
 }
 
-//Add - Add transaction
+// Add - Add transaction
 func (t *transactions) Add(receivedTime time.Time, args ...interface{}) {
 	if !t.received {
 		t.received = true
@@ -67,7 +63,7 @@ func (t *transactions) add(receivedTime time.Time, args ...interface{}) {
 	t.data[index] = true
 }
 
-//RemoveOutdatedPeriodically - clean expired transaction periodically
+// RemoveOutdatedPeriodically - clean expired transaction periodically
 func (t *transactions) RemoveOutdatedPeriodically(c clock.Clock) {
 loop:
 	for {
@@ -102,8 +98,8 @@ func cleanupExpiredTransaction(t *transactions) {
 	t.data = tmpArray
 }
 
-//findNextReceivedItemIndex - find first item in the array its value is true
-//if nothing found, return indexNotFound(-1)
+// findNextReceivedItemIndex - find first item in the array its value is true
+// if nothing found, return indexNotFound(-1)
 func findNextReceivedItemIndex(t *transactions) int {
 	return findReceivedItemFromIndex(t, 1)
 }
@@ -117,7 +113,7 @@ func findReceivedItemFromIndex(t *transactions, start int) int {
 	return indexNotFound
 }
 
-//Summary - summarize transactions info, mainly droprate
+// Summary - summarize transactions info, mainly droprate
 func (t *transactions) Summary() interface{} {
 	if indexNotFound == findFirstReceivedItemIndex(t) {
 		droprate := float64(0)
@@ -173,11 +169,7 @@ func initialiseTransactions(shutdown <-chan struct{}) {
 	shutdownChan = shutdown
 }
 
-func newTransaction() *transactions {
-	return &transactions{}
-}
-
-//NewTransaction - new transaction
+// NewTransaction - new transaction
 func NewTransaction() Recorder {
-	return newTransaction()
+	return &transactions{}
 }
