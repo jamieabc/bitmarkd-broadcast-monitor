@@ -9,12 +9,12 @@ import (
 	zmq "github.com/pebbe/zmq4"
 )
 
-//Remote - remote interface
+// Remote - remote interface
 type Remote interface {
+	BlockHeader(uint64) (*communication.BlockHeaderResponse, error)
 	BroadcastReceiver() network.Client
 	Close() error
 	CommandSender() network.Client
-	DigestOfHeight(height uint64) (*communication.DigestResponse, error)
 	Info() (*communication.InfoResponse, error)
 	Height() (*communication.HeightResponse, error)
 }
@@ -129,22 +129,12 @@ func (r *remote) closeCommandSenderAndReceiver() error {
 	return nil
 }
 
-//CommandSender - zmq remote of command sender and receiver
+// CommandSender - zmq remote of command sender and receiver
 func (r *remote) CommandSender() network.Client {
 	return r.commandSender
 }
 
-//DigestOfHeight - digest of block height
-func (r *remote) DigestOfHeight(height uint64) (*communication.DigestResponse, error) {
-	comm := communication.New(communication.ComDigest, r.commandSender)
-	reply, err := comm.Get(height)
-	if nil != err {
-		return nil, err
-	}
-	return reply.(*communication.DigestResponse), nil
-}
-
-//Info - remote info
+// Info - remote info
 func (r *remote) Info() (*communication.InfoResponse, error) {
 	comm := communication.New(communication.ComInfo, r.commandSender)
 	reply, err := comm.Get()
@@ -155,7 +145,7 @@ func (r *remote) Info() (*communication.InfoResponse, error) {
 	return reply.(*communication.InfoResponse), nil
 }
 
-//Height - remote height
+// Height - remote height
 func (r *remote) Height() (*communication.HeightResponse, error) {
 	comm := communication.New(communication.ComHeight, r.commandSender)
 	reply, err := comm.Get()
@@ -163,4 +153,14 @@ func (r *remote) Height() (*communication.HeightResponse, error) {
 		return nil, err
 	}
 	return reply.(*communication.HeightResponse), nil
+}
+
+// BlockHeader - block header
+func (r *remote) BlockHeader(height uint64) (*communication.BlockHeaderResponse, error) {
+	comm := communication.New(communication.ComBlockHeader, r.commandSender)
+	reply, err := comm.Get(height)
+	if nil != err {
+		return nil, err
+	}
+	return reply.(*communication.BlockHeaderResponse), nil
 }

@@ -135,7 +135,7 @@ func process(n Node, rs recorders, data [][]byte) {
 
 	switch category := string(data[1]); category {
 	case blockCmdStr:
-		header, digest, _, err := blockrecord.ExtractHeader(data[2])
+		header, digest, _, err := blockrecord.ExtractHeader(data[2], uint64(0))
 		if nil != err {
 			log.Errorf("extract block header with error: %s", err)
 			return
