@@ -55,7 +55,7 @@ func removeFiles() {
 func setupTestDBConfig() configuration.InfluxDBConfig {
 	return configuration.InfluxDBConfig{
 		Database: "test",
-		IPv4:     "http://localhost",
+		IP:       "http://localhost",
 		Port:     "1234",
 		User:     "user",
 		Password: "password",

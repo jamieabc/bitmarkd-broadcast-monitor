@@ -20,7 +20,7 @@ func setupConfigurationTestFile() {
 local M = {}
 M.nodes = {
   {
-    address_ipv4 = "127.0.0.1",
+    ip = "127.0.0.1",
     broadcast_port = "1234",
     command_port = "4321",
     public_key = "abcdef",
@@ -28,7 +28,7 @@ M.nodes = {
     name = "name1",
   },
   {
-    address_ipv4 = "127.0.0.1",
+    ip = "127.0.0.1",
     broadcast_port = "5678",
     command_port = "8765",
     public_key = "wxyz",
@@ -55,7 +55,7 @@ M.logging = {
 M.heartbeat_interval_second = 60
 
 M.influxdb = {
-   ipv4 = "1.2.3.4",
+   ip = "1.2.3.4",
    port = "5678",
    user = "user",
    password = "password",
@@ -87,7 +87,7 @@ func TestParse(t *testing.T) {
 	actual := config.Data()
 
 	node1 := configuration.NodeConfig{
-		AddressIPv4:   "127.0.0.1",
+		IP:            "127.0.0.1",
 		BroadcastPort: "1234",
 		CommandPort:   "4321",
 		PublicKey:     "abcdef",
@@ -96,7 +96,7 @@ func TestParse(t *testing.T) {
 	}
 
 	node2 := configuration.NodeConfig{
-		AddressIPv4:   "127.0.0.1",
+		IP:            "127.0.0.1",
 		BroadcastPort: "5678",
 		CommandPort:   "8765",
 		PublicKey:     "wxyz",
@@ -110,7 +110,7 @@ func TestParse(t *testing.T) {
 	}
 
 	influxdb := configuration.InfluxDBConfig{
-		IPv4:     "1.2.3.4",
+		IP:       "1.2.3.4",
 		Port:     "5678",
 		User:     "user",
 		Password: "password",
@@ -175,7 +175,7 @@ func TestNodesConfig(t *testing.T) {
 	defer teardownTestFile()
 
 	node1 := configuration.NodeConfig{
-		AddressIPv4:   "127.0.0.1",
+		IP:            "127.0.0.1",
 		BroadcastPort: "1234",
 		CommandPort:   "4321",
 		PublicKey:     "abcdef",
@@ -184,7 +184,7 @@ func TestNodesConfig(t *testing.T) {
 	}
 
 	node2 := configuration.NodeConfig{
-		AddressIPv4:   "127.0.0.1",
+		IP:            "127.0.0.1",
 		BroadcastPort: "5678",
 		CommandPort:   "8765",
 		PublicKey:     "wxyz",
@@ -232,7 +232,7 @@ func TestInfluxDB(t *testing.T) {
 	config, _ := configuration.Parse(testFile)
 	influxdb := config.Influx()
 	expected := configuration.InfluxDBConfig{
-		IPv4:     "1.2.3.4",
+		IP:       "1.2.3.4",
 		Port:     "5678",
 		User:     "user",
 		Password: "password",

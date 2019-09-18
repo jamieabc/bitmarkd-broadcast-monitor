@@ -29,7 +29,7 @@ type configuration struct {
 
 //NodeConfig - node config
 type NodeConfig struct {
-	AddressIPv4   string `gluamapper:"address_ipv4"`
+	IP            string `gluamapper:"ip"`
 	BroadcastPort string `gluamapper:"broadcast_port"`
 	CommandPort   string `gluamapper:"command_port"`
 	Chain         string `gluamapper:"chain"`
@@ -40,7 +40,7 @@ type NodeConfig struct {
 //InfluxDBConfig - influxdb config
 type InfluxDBConfig struct {
 	Database string `gluamapper:"database"`
-	IPv4     string `gluamapper:"ipv4"`
+	IP       string `gluamapper:"ip"`
 	Port     string `gluamapper:"port"`
 	User     string `gluamapper:"user"`
 	Password string `gluamapper:"password"`
@@ -114,7 +114,7 @@ func (c *configuration) String() string {
 		str.WriteString(fmt.Sprintf(
 			"\tnode[%d]:\n\t\taddress: \t%s\n\t\tbroadcast port: %s\n\t\tcommand port: \t%s\n\t\tpublic key: \t%s\n\t\tchain: %s\n\t\tname: \t%s\n",
 			i,
-			node.AddressIPv4,
+			node.IP,
 			node.BroadcastPort,
 			node.CommandPort,
 			node.PublicKey,
@@ -126,7 +126,7 @@ func (c *configuration) String() string {
 	str.WriteString(fmt.Sprintf("logging: %+v\n", c.Logging))
 	str.WriteString("influx database:\n")
 	str.WriteString(fmt.Sprintf("\tip:\t%s\n\tport:\t%s\n\tuser:\t%s\n\tpassword:\t%s\n",
-		c.InfluxDB.IPv4,
+		c.InfluxDB.IP,
 		c.InfluxDB.Port,
 		c.InfluxDB.User,
 		c.InfluxDB.Password))

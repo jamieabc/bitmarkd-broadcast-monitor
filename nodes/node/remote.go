@@ -84,11 +84,11 @@ func newZmqClient(nodeKey *nodeKeys, info connectionInfo) (client network.Client
 }
 
 func broadcastAddressAndPort(config configuration.NodeConfig) string {
-	return hostAndPort(config.AddressIPv4, config.BroadcastPort)
+	return hostAndPort(config.IP, config.BroadcastPort)
 }
 
 func commandAddressAndPort(config configuration.NodeConfig) string {
-	return hostAndPort(config.AddressIPv4, config.CommandPort)
+	return hostAndPort(config.IP, config.CommandPort)
 }
 
 func hostAndPort(host string, port string) string {
