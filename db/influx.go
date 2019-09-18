@@ -152,13 +152,13 @@ func Initialise(config configuration.InfluxDBConfig, log *logger.L) error {
 
 func initialise(config configuration.InfluxDBConfig, log *logger.L) (*Influx, error) {
 	ok := true
-	if "" == config.IPv4 || "" == config.Port {
+	if "" == config.IP || "" == config.Port {
 		log.Warnf("connection error: %s", fault.InvalidConnection)
 		ok = false
 	}
 
 	c, err := dbClient.NewHTTPClient(dbClient.HTTPConfig{
-		Addr:               connection(config.IPv4, config.Port),
+		Addr:               connection(config.IP, config.Port),
 		Username:           config.User,
 		Password:           config.Password,
 		UserAgent:          "",
