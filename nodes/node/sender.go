@@ -3,6 +3,8 @@ package node
 import (
 	"time"
 
+	"github.com/bitmark-inc/bitmarkd/blockrecord"
+
 	"github.com/bitmark-inc/bitmarkd/blockdigest"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/communication"
 )
@@ -21,19 +23,6 @@ func senderLoop(n Node) {
 			log.Infof("terminate sender loop")
 			return
 
-		case <-notifyChan:
-			height, err := remoteHeight(n)
-			if nil != err {
-				log.Errorf("get remote height with error: %s", err)
-				continue
-			}
-			digest, err := remoteDigestOfHeight(n, height)
-			if nil != err {
-				log.Errorf("get remote digest of height with error: %s", err)
-				continue
-			}
-			log.Infof("remote height %d with digest %s", height, digest)
-
 		case <-timer.C:
 			info, err := remoteInfo(n)
 			if nil != err {
@@ -41,12 +30,13 @@ func senderLoop(n Node) {
 				continue
 			}
 			log.Infof("remote info: %s", info)
-			digest, err := remoteDigestOfHeight(n, info.Height)
-			if nil != err {
-				log.Errorf("remote height %d digest with error: %s", info.Height, err)
-				continue
-			}
-			log.Infof("remote height %d digest %s", info.Height, digest)
+			header, digest, err := remoteBlockHeader(n, info.Height)
+			log.Infof(
+				"remote height %d with digest %s, generated at %s",
+				info.Height,
+				digest,
+				time.Unix(int64(header.Timestamp), 0),
+			)
 			timer.Reset(checkIntervalSecond)
 		}
 	}
@@ -68,10 +58,10 @@ func remoteHeight(n Node) (uint64, error) {
 	return height.Height, nil
 }
 
-func remoteDigestOfHeight(n Node, height uint64) (blockdigest.Digest, error) {
-	digest, err := n.Remote().DigestOfHeight(height)
+func remoteBlockHeader(n Node, height uint64) (*blockrecord.Header, blockdigest.Digest, error) {
+	resp, err := n.Remote().BlockHeader(height)
 	if nil != err {
-		return blockdigest.Digest{}, err
+		return &blockrecord.Header{}, blockdigest.Digest{}, err
 	}
-	return digest.Digest, nil
+	return resp.Header, resp.Digest, nil
 }

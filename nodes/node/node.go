@@ -48,13 +48,11 @@ type nodeKeys struct {
 
 var (
 	shutdownChan <-chan struct{}
-	notifyChan   chan struct{}
 )
 
 //Initialise
 func Initialise(shutdown <-chan struct{}) {
 	shutdownChan = shutdown
-	notifyChan = make(chan struct{}, 1)
 	recorder.Initialise(shutdown)
 }
 
