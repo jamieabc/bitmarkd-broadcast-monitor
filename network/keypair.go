@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"strings"
 
-	"github.com/bitmark-inc/bitmarkd/fault"
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/fault"
 )
 
 const (
@@ -21,7 +21,7 @@ func ReadPublicKey(key string) ([]byte, error) {
 		return []byte{}, err
 	}
 	if private {
-		return []byte{}, fault.ErrInvalidPublicKeyFile
+		return []byte{}, fault.InvalidPublicKeyFile
 	}
 	return data, err
 }
@@ -33,7 +33,7 @@ func ReadPrivateKey(key string) ([]byte, error) {
 		return []byte{}, err
 	}
 	if !private {
-		return []byte{}, fault.ErrInvalidPrivateKeyFile
+		return []byte{}, fault.InvalidPrivateKeyFile
 	}
 	return data, err
 }
@@ -47,7 +47,7 @@ func parseKey(data string) ([]byte, bool, error) {
 			return []byte{}, false, err
 		}
 		if len(h) != privateLength {
-			return []byte{}, false, fault.ErrInvalidPrivateKeyFile
+			return []byte{}, false, fault.InvalidPrivateKeyFile
 		}
 		return h, true, nil
 	} else if strings.HasPrefix(s, taggedPublic) {
@@ -56,10 +56,10 @@ func parseKey(data string) ([]byte, bool, error) {
 			return []byte{}, false, err
 		}
 		if len(h) != publicLength {
-			return []byte{}, false, fault.ErrInvalidPublicKeyFile
+			return []byte{}, false, fault.InvalidPublicKeyFile
 		}
 		return h, false, nil
 	}
 
-	return []byte{}, false, fault.ErrInvalidPublicKeyFile
+	return []byte{}, false, fault.InvalidPublicKeyFile
 }
