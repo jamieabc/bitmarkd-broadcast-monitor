@@ -21,19 +21,6 @@ func senderLoop(n Node) {
 			log.Infof("terminate sender loop")
 			return
 
-		case <-notifyChan:
-			height, err := remoteHeight(n)
-			if nil != err {
-				log.Errorf("get remote height with error: %s", err)
-				continue
-			}
-			digest, err := remoteDigestOfHeight(n, height)
-			if nil != err {
-				log.Errorf("get remote digest of height with error: %s", err)
-				continue
-			}
-			log.Infof("remote height %d with digest %s", height, digest)
-
 		case <-timer.C:
 			info, err := remoteInfo(n)
 			if nil != err {
