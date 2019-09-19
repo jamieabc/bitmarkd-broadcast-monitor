@@ -13,17 +13,17 @@ type Recorder interface {
 	Summarizer
 }
 
-// Adder - interface for adding record
+// Adder - interface for adding a record
 type Adder interface {
 	Add(time.Time, ...interface{})
 }
 
-// PeriodicRemover - interface for removing outdated record
+// PeriodicRemover - interface for periodically removing outdated records
 type PeriodicRemover interface {
 	PeriodicRemove(clock clock.Clock)
 }
 
-// Summarizer - interface for summarizing records
+// Summarizer - interface for summarizing status of records
 type Summarizer interface {
 	Summary() interface{}
 }
