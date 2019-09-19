@@ -16,6 +16,7 @@ type Configuration interface {
 	Key() Keys
 	LogConfig() logger.Configuration
 	NodesConfig() []NodeConfig
+	SlackConfig() SlackConfig
 	String() string
 }
 
@@ -25,6 +26,7 @@ type configuration struct {
 	Logging                 logger.Configuration `gluamapper:"logging"`
 	HeartbeatIntervalSecond int                  `gluamapper:"heartbeat_interval_second"`
 	InfluxDB                InfluxDBConfig       `gluamapper:"influxdb"`
+	Slack                   SlackConfig          `gluamapper:"slack"`
 }
 
 // NodeConfig - node config
@@ -44,6 +46,12 @@ type InfluxDBConfig struct {
 	Port     string `gluamapper:"port"`
 	User     string `gluamapper:"user"`
 	Password string `gluamapper:"password"`
+}
+
+// SlackConfig - slack config
+type SlackConfig struct {
+	Token     string `gluamapper:"token"`
+	ChannelID string `gluamapper:"channel_id"`
 }
 
 // Keys - public and private keys
@@ -130,6 +138,9 @@ func (c *configuration) String() string {
 		c.InfluxDB.Port,
 		c.InfluxDB.User,
 		c.InfluxDB.Password))
+	str.WriteString(fmt.Sprintf(
+		"\tslack:\n\t\ttoken:%s\n\t\tchannel ID: %s\n",
+		c.Slack.Token, c.Slack.ChannelID))
 	return str.String()
 }
 
@@ -146,4 +157,9 @@ func (c *configuration) HeartbeatIntervalInSecond() int {
 // Influx - return influx config
 func (c *configuration) Influx() InfluxDBConfig {
 	return c.InfluxDB
+}
+
+// SlackConfig - return slack config
+func (c *configuration) SlackConfig() SlackConfig {
+	return c.Slack
 }
