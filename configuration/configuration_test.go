@@ -254,3 +254,17 @@ func TestInfluxDB(t *testing.T) {
 
 	assert.Equal(t, expected, influxdb, "wrong influxdb")
 }
+
+func TestSlack(t *testing.T) {
+	setupConfigurationTestFile()
+	defer teardownTestFile()
+
+	config, _ := configuration.Parse(testFile)
+	slack := config.SlackConfig()
+	expected := configuration.SlackConfig{
+		Token:     "token",
+		ChannelID: "channelID",
+	}
+
+	assert.Equal(t, expected, slack, "wrong influxdb")
+}
