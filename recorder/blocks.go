@@ -146,8 +146,8 @@ func nextID(b *blocks) {
 	}
 }
 
-// RemoveOutdatedPeriodically - remove outdated item
-func (b *blocks) RemoveOutdatedPeriodically(c clock.Clock) {
+// PeriodicRemove - remove outdated item
+func (b *blocks) PeriodicRemove(c clock.Clock) {
 	timer := c.NewTimer(expiredTimeInterval)
 loop:
 	for {

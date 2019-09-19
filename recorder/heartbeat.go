@@ -70,8 +70,8 @@ func (h *heartbeat) Add(t time.Time, args ...interface{}) {
 	h.Unlock()
 }
 
-//RemoveOutdatedPeriodically - clean expired heartbeat record periodically
-func (h *heartbeat) RemoveOutdatedPeriodically(c clock.Clock) {
+//PeriodicRemove - clean expired heartbeat record periodically
+func (h *heartbeat) PeriodicRemove(c clock.Clock) {
 	timer := c.After(expiredTimeInterval)
 loop:
 	for {
@@ -174,6 +174,6 @@ func NewHeartbeat(interval float64, shutdownChan <-chan struct{}) Recorder {
 	fullCycleReceivedCount = math.Floor(expiredTimeInterval.Seconds() / interval)
 	intervalSecond = interval
 	c := clock.NewClock()
-	go h.RemoveOutdatedPeriodically(c)
+	go h.PeriodicRemove(c)
 	return h
 }

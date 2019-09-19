@@ -81,7 +81,7 @@ func TestBlocksRemoveOutdatedPeriodicallyWhenNoExpiration(t *testing.T) {
 	s := b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, s.Duration >= duration, "wrong duration")
 
-	go b.RemoveOutdatedPeriodically(mock)
+	go b.PeriodicRemove(mock)
 	<-time.After(10 * time.Millisecond)
 	shutdownChan <- struct{}{}
 
@@ -109,7 +109,7 @@ func TestBlocksRemoveOutdatedPeriodicallyWhenOneExpiration(t *testing.T) {
 	s := b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, s.Duration >= 2*time.Hour, "wrong duration")
 
-	go b.RemoveOutdatedPeriodically(mock)
+	go b.PeriodicRemove(mock)
 	<-time.After(10 * time.Millisecond)
 	shutdownChan <- struct{}{}
 
@@ -136,7 +136,7 @@ func TestBlocksRemoveOutdatedPeriodicallyWhenManyExpiration(t *testing.T) {
 	s := b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, s.Duration >= 3*time.Hour, "wrong duration")
 
-	go b.RemoveOutdatedPeriodically(mock)
+	go b.PeriodicRemove(mock)
 	<-time.After(10 * time.Millisecond)
 	shutdownChan <- struct{}{}
 
@@ -384,7 +384,7 @@ func TestSummaryWhenForkBlockRecycledEntirely(t *testing.T) {
 		Number: blockNumber + 7,
 	})
 
-	go b.RemoveOutdatedPeriodically(mock)
+	go b.PeriodicRemove(mock)
 	<-time.After(10 * time.Millisecond)
 	shutdownChan <- struct{}{}
 
@@ -439,7 +439,7 @@ func TestSummaryWhenForkBlockRecycledPartially(t *testing.T) {
 		Number: blockNumber + 5,
 	})
 
-	go b.RemoveOutdatedPeriodically(mock)
+	go b.PeriodicRemove(mock)
 	<-time.After(10 * time.Millisecond)
 	shutdownChan <- struct{}{}
 
@@ -502,7 +502,7 @@ func TestSummaryWhenLongConfirmRecycled(t *testing.T) {
 		GenerateTime: oneHourBefore,
 	})
 
-	go b.RemoveOutdatedPeriodically(mock)
+	go b.PeriodicRemove(mock)
 	<-time.After(10 * time.Millisecond)
 	shutdownChan <- struct{}{}
 

@@ -63,8 +63,8 @@ func (t *transactions) add(receivedTime time.Time, args ...interface{}) {
 	t.data[index] = true
 }
 
-// RemoveOutdatedPeriodically - clean expired transaction periodically
-func (t *transactions) RemoveOutdatedPeriodically(c clock.Clock) {
+// PeriodicRemove - clean expired transaction periodically
+func (t *transactions) PeriodicRemove(c clock.Clock) {
 loop:
 	for {
 		select {

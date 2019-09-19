@@ -73,7 +73,7 @@ func (p *poller) Add(client Client, events zmq.State) {
 	p.poll.Add(socket, events)
 }
 
-//Remove - queue a client to remove
+//PeriodicRemove - queue a client to remove
 func (p *poller) Remove(client Client) {
 	p.Lock()
 	p.removeQueue = append(p.removeQueue, client)
