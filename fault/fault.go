@@ -23,4 +23,7 @@ var (
 
 	// InvalidPrivateKeyFile - invalid private key file
 	InvalidPrivateKeyFile = errors.New("invalid private key file")
+
+	// InsufficientSlackSendParameter - insufficient slack send parameter
+	InsufficientSlackSendParameter = errors.New("insufficient slack send parameter")
 )

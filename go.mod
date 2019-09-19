@@ -7,6 +7,7 @@ require (
 	github.com/bitmark-inc/logger v0.3.4
 	github.com/golang/mock v1.3.1
 	github.com/influxdata/influxdb1-client v0.0.0-20190809212627-fc22c7df067e
+	github.com/nlopes/slack v0.6.0
 	github.com/pebbe/zmq4 v1.0.0
 	github.com/stretchr/testify v1.4.0
 	github.com/yuin/gluamapper v0.0.0-20150323120927-d836955830e7
