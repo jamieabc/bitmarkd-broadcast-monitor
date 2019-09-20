@@ -54,4 +54,9 @@ M.influxdb = {
    database = "database",
 }
 
+M.slack = {
+  token = "slack-token",
+  channel_id = "channelID",
+}
+
 return M
