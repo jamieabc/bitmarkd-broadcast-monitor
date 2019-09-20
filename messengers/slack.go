@@ -22,7 +22,7 @@ func (s *slackMessenger) Send(args ...interface{}) error {
 	return nil
 }
 
-func newSlack(token string, channelID string) Messenger {
+func NewSlack(token string, channelID string) Messenger {
 	client := slack.New(token)
 	return &slackMessenger{
 		channelID: channelID,
