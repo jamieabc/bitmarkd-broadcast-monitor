@@ -14,6 +14,7 @@ const (
 	measurement            = "transaction-droprate"
 )
 
+// checkerLoop - loop to check all summaries
 func checkerLoop(n Node, rs recorders) {
 	log := n.Log()
 	transactionTimer := time.NewTimer(transactionCheckMinute)
@@ -35,6 +36,9 @@ func checkerLoop(n Node, rs recorders) {
 
 		case <-blockTimer.C:
 			bs := rs.block.Summary().(*recorder.BlocksSummary)
+			if !bs.Validate() {
+				sendToSlack(n.Name(), bs.String())
+			}
 			log.Infof("block summary: %s", bs)
 			blockTimer.Reset(blockCheckMinute)
 		}

@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/messengers"
+
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/recorder"
 
 	"github.com/bitmark-inc/logger"
@@ -12,7 +14,7 @@ import (
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/network"
 )
 
-//Node - node interface
+// Node - node interface
 type Node interface {
 	BroadcastReceiver() network.Client
 	Close() error
@@ -47,17 +49,25 @@ type nodeKeys struct {
 }
 
 var (
-	shutdownChan <-chan struct{}
+	shutdownChan            <-chan struct{}
+	heartbeatIntervalSecond int
+	keys                    configuration.Keys
+	slack                   messengers.Messenger
 )
 
-//Initialise
-func Initialise(shutdown <-chan struct{}) {
+// Initialise - setup node related common variables
+func Initialise(shutdown <-chan struct{}, configs configuration.Configuration) {
 	shutdownChan = shutdown
 	recorder.Initialise(shutdown)
+	heartbeatIntervalSecond = configs.HeartbeatIntervalInSecond()
+	keys = configs.Key()
+
+	slackConfig := configs.SlackConfig()
+	slack = messengers.NewSlack(slackConfig.Token, slackConfig.ChannelID)
 }
 
-//NewNode - create new node
-func NewNode(config configuration.NodeConfig, keys configuration.Keys, idx int, heartbeatIntervalSecond int) (intf Node, err error) {
+// NewNode - create new node
+func NewNode(config configuration.NodeConfig, idx int) (intf Node, err error) {
 	log := logger.New(config.Name)
 
 	n := &node{
@@ -114,22 +124,32 @@ func parseKeys(keys configuration.Keys, remotePublicKeyStr string) (*nodeKeys, e
 	}, nil
 }
 
-//BroadcastReceiverClient - get zmq broadcast receiver remote
+func sendToSlack(node string, msg string) {
+	if slack.Validate() {
+		finalMsg := fmt.Sprintf("%s %s", node, msg)
+		err := slack.Send(finalMsg)
+		if nil != err {
+			fmt.Printf("send slack message %s with error: %s\n", msg, err)
+		}
+	}
+}
+
+// BroadcastReceiverClient - get zmq broadcast receiver remote
 func (n *node) BroadcastReceiver() network.Client {
 	return n.remote.BroadcastReceiver()
 }
 
-//CommandSender - network remote of command sender and receiver
+// CommandSender - network remote of command sender and receiver
 func (n *node) CommandSender() network.Client {
 	return n.remote.CommandSender()
 }
 
-//Remote - return remote interface
+// Remote - return remote interface
 func (n *node) Remote() Remote {
 	return n.remote
 }
 
-//Close - close connection
+// Close - close connection
 func (n *node) Close() error {
 	if err := n.remote.Close(); nil != err {
 		return err
@@ -137,12 +157,12 @@ func (n *node) Close() error {
 	return nil
 }
 
-//Log - get logger
+// Log - get logger
 func (n *node) Log() *logger.L {
 	return n.log
 }
 
-//Monitor - start to monitor
+// Monitor - start to monitor
 func (n *node) Monitor() {
 	rs := recorders{
 		heartbeat:   n.heartbeatRecorder,
@@ -164,7 +184,7 @@ func (n *node) Monitor() {
 	return
 }
 
-//Name - return node name
+// Name - return node name
 func (n *node) Name() string {
 	return n.name
 }

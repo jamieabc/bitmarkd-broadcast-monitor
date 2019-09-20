@@ -50,7 +50,7 @@ func TestTransactionCleanupPeriodicallyWhenExpiration(t *testing.T) {
 
 	assert.Equal(t, float64(expectedTotalReceivedCount-1)/expectedTotalReceivedCount, summary.Droprate, "wrong droprate")
 
-	go r.RemoveOutdatedPeriodically(mock)
+	go r.PeriodicRemove(mock)
 	<-time.After(10 * time.Millisecond)
 	//shutdownChan <- struct{}{}
 	summary = r.Summary().(*recorder.TransactionSummary)
@@ -76,10 +76,20 @@ func TestTransactionCleanupPeriodicallyWhenNoExpiration(t *testing.T) {
 
 	assert.Equal(t, float64(0), summary.Droprate, "wrong droprate")
 
-	go r.RemoveOutdatedPeriodically(mock)
+	go r.PeriodicRemove(mock)
 	<-time.After(10 * time.Millisecond)
 	shutdownChan <- struct{}{}
 	summary = r.Summary().(*recorder.TransactionSummary)
 
 	assert.Equal(t, float64(0), summary.Droprate, "wrong droprate")
+}
+
+func TestTransactionSummaryValidateWhenInvalid(t *testing.T) {
+	s := recorder.TransactionSummary{
+		Droprate:      0.2,
+		Duration:      time.Minute,
+		ReceivedCount: 10,
+	}
+
+	assert.Equal(t, false, s.Validate(), "wrong validator")
 }

@@ -26,17 +26,19 @@ func (b BlockData) isEmpty() bool {
 	return uint64(0) == b.Number || "" == b.Hash
 }
 
-// fork - fork data structure
-type fork struct {
+// Fork - Fork data structure
+type Fork struct {
 	Begin     uint64
 	End       uint64
 	ExpiredAt time.Time
 }
 
-type longConfirm struct {
+// LongConfirm - structure to record long confirmation
+type LongConfirm struct {
 	BlockNumber uint64
 	ExpiredAt   time.Time
 	Period      time.Duration
+	Reported    bool
 }
 
 type blocks struct {
@@ -44,8 +46,8 @@ type blocks struct {
 	data           [dataLength]BlockData
 	latestBlock    BlockData
 	forkInProgress bool
-	forks          []fork
-	longConfirms   []longConfirm
+	forks          []Fork
+	longConfirms   []LongConfirm
 	id             int
 }
 
@@ -98,7 +100,7 @@ func processFirstForkBlock(b *blocks, nextBlock BlockData) {
 	if b.latestBlock.Number != nextBlock.Number {
 		b.forkInProgress = true
 	}
-	b.forks = append(b.forks, fork{
+	b.forks = append(b.forks, Fork{
 		Begin:     nextBlock.Number,
 		End:       b.latestBlock.Number,
 		ExpiredAt: nextBlock.ReceivedTime.Add(expiredTimeInterval),
@@ -130,7 +132,7 @@ func (b *blocks) updateLatestBlock(nextBlock BlockData) {
 func (b *blocks) updateLongConfirmPeriodInfo(nextBlock BlockData) {
 	confirmInterval := nextBlock.ReceivedTime.Sub(nextBlock.GenerateTime)
 	if confirmInterval >= longConfirmInterval {
-		b.longConfirms = append(b.longConfirms, longConfirm{
+		b.longConfirms = append(b.longConfirms, LongConfirm{
 			BlockNumber: nextBlock.Number,
 			ExpiredAt:   nextBlock.ReceivedTime.Add(expiredTimeInterval),
 			Period:      confirmInterval,
@@ -146,8 +148,8 @@ func nextID(b *blocks) {
 	}
 }
 
-// RemoveOutdatedPeriodically - remove outdated item
-func (b *blocks) RemoveOutdatedPeriodically(c clock.Clock) {
+// PeriodicRemove - periodically remove outdated item
+func (b *blocks) PeriodicRemove(c clock.Clock) {
 	timer := c.NewTimer(expiredTimeInterval)
 loop:
 	for {
@@ -200,7 +202,7 @@ func cleanupExpiredForks(b *blocks, now time.Time) {
 	}
 
 	if endIdx >= len(b.forks) {
-		b.forks = make([]fork, 0)
+		b.forks = make([]Fork, 0)
 	} else {
 		b.forks = b.forks[endIdx+1:]
 	}
@@ -219,7 +221,7 @@ func cleanupExpiredLongConfirms(b *blocks, now time.Time) {
 }
 
 // Summary - summarize blocks stat
-func (b *blocks) Summary() interface{} {
+func (b *blocks) Summary() SummaryOutput {
 	duration, startBlock, endBlock := summarize(b)
 	return &BlocksSummary{
 		BlockCount:   countBlock(startBlock, endBlock),
@@ -290,8 +292,8 @@ func prevBlockNumber(b [dataLength]BlockData, index int) uint64 {
 type BlocksSummary struct {
 	BlockCount   uint64
 	Duration     time.Duration
-	Forks        []fork
-	LongConfirms []longConfirm // confirm time longer than 30 minutes
+	Forks        []Fork
+	LongConfirms []LongConfirm // confirm time longer than 30 minutes
 }
 
 func (b *BlocksSummary) String() string {
@@ -306,7 +308,28 @@ func (b *BlocksSummary) String() string {
 	)
 }
 
-func forkInfo(forks []fork) string {
+// Validate - find any long confirmations that has not reported
+func (b *BlocksSummary) Validate() bool {
+	var reported []LongConfirm
+	if 0 == len(b.LongConfirms) {
+		return false
+	}
+
+	for _, c := range b.LongConfirms {
+		if !c.Reported {
+			c.Reported = true
+			reported = append(reported, c)
+		}
+	}
+
+	if 0 < len(reported) {
+		b.LongConfirms = reported
+		return false
+	}
+	return true
+}
+
+func forkInfo(forks []Fork) string {
 	if 0 < len(forks) {
 		var str strings.Builder
 		str.WriteString("forks info: ")
@@ -318,7 +341,7 @@ func forkInfo(forks []fork) string {
 	return ""
 }
 
-func confirmInfo(longConfirms []longConfirm) string {
+func confirmInfo(longConfirms []LongConfirm) string {
 	if 0 < len(longConfirms) {
 		var str strings.Builder
 		str.WriteString("long confirms: ")
@@ -333,7 +356,7 @@ func confirmInfo(longConfirms []longConfirm) string {
 // NewBlock - new blocks data structure
 func NewBlock() Recorder {
 	return &blocks{
-		forks:        make([]fork, 0),
-		longConfirms: make([]longConfirm, 0),
+		forks:        make([]Fork, 0),
+		longConfirms: make([]LongConfirm, 0),
 	}
 }

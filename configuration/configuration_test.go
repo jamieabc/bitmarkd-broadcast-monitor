@@ -43,23 +43,28 @@ M.keys = {
 }
 
 M.logging = {
-    size = 8888,
-    directory = "log",
-    count = 10,
-    console = false,
-    levels = {
-        DEFAULT = "error",
-    },
+  size = 8888,
+  directory = "log",
+  count = 10,
+  console = false,
+  levels = {
+      DEFAULT = "error",
+  },
 }
 
 M.heartbeat_interval_second = 60
 
 M.influxdb = {
-   ip = "1.2.3.4",
-   port = "5678",
-   user = "user",
-   password = "password",
-   database = "database",
+  ip = "1.2.3.4",
+  port = "5678",
+  user = "user",
+  password = "password",
+  database = "database",
+}
+
+M.slack = {
+  token = "token",
+  channel_id = "channelID",
 }
 
 return M
@@ -117,11 +122,17 @@ func TestParse(t *testing.T) {
 		Database: "database",
 	}
 
+	slack := configuration.SlackConfig{
+		Token:     "token",
+		ChannelID: "channelID",
+	}
+
 	assert.Equal(t, keys, actual.Keys, "wrong key")
 	assert.Equal(t, 2, len(actual.Nodes), "wrong nodes")
 	assert.Equal(t, node1, actual.Nodes[0], "different node info")
 	assert.Equal(t, node2, actual.Nodes[1], "different node info")
 	assert.Equal(t, influxdb, actual.InfluxDB, "different influxdb")
+	assert.Equal(t, slack, actual.Slack, "wrong slack")
 }
 
 func TestString(t *testing.T) {
@@ -147,6 +158,8 @@ func TestString(t *testing.T) {
 	assert.Contains(t, actual, "name1", "wrong name")
 	assert.Contains(t, actual, "user", "wrong influx user")
 	assert.Contains(t, actual, "password", "wrong influx password")
+	assert.Contains(t, actual, "token", "wrong slack token")
+	assert.Contains(t, actual, "channelID", "wrong slack channel ID")
 }
 
 func TestLogging(t *testing.T) {
@@ -240,4 +253,18 @@ func TestInfluxDB(t *testing.T) {
 	}
 
 	assert.Equal(t, expected, influxdb, "wrong influxdb")
+}
+
+func TestSlack(t *testing.T) {
+	setupConfigurationTestFile()
+	defer teardownTestFile()
+
+	config, _ := configuration.Parse(testFile)
+	slack := config.SlackConfig()
+	expected := configuration.SlackConfig{
+		Token:     "token",
+		ChannelID: "channelID",
+	}
+
+	assert.Equal(t, expected, slack, "wrong influxdb")
 }

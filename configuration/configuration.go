@@ -8,7 +8,7 @@ import (
 	"github.com/bitmark-inc/logger"
 )
 
-//Configuration - configuration interface
+// Configuration - configuration interface
 type Configuration interface {
 	Data() *configuration
 	HeartbeatIntervalInSecond() int
@@ -16,6 +16,7 @@ type Configuration interface {
 	Key() Keys
 	LogConfig() logger.Configuration
 	NodesConfig() []NodeConfig
+	SlackConfig() SlackConfig
 	String() string
 }
 
@@ -25,9 +26,10 @@ type configuration struct {
 	Logging                 logger.Configuration `gluamapper:"logging"`
 	HeartbeatIntervalSecond int                  `gluamapper:"heartbeat_interval_second"`
 	InfluxDB                InfluxDBConfig       `gluamapper:"influxdb"`
+	Slack                   SlackConfig          `gluamapper:"slack"`
 }
 
-//NodeConfig - node config
+// NodeConfig - node config
 type NodeConfig struct {
 	IP            string `gluamapper:"ip"`
 	BroadcastPort string `gluamapper:"broadcast_port"`
@@ -37,7 +39,7 @@ type NodeConfig struct {
 	PublicKey     string `gluamapper:"public_key"`
 }
 
-//InfluxDBConfig - influxdb config
+// InfluxDBConfig - influxdb config
 type InfluxDBConfig struct {
 	Database string `gluamapper:"database"`
 	IP       string `gluamapper:"ip"`
@@ -46,7 +48,13 @@ type InfluxDBConfig struct {
 	Password string `gluamapper:"password"`
 }
 
-//Keys - public and private keys
+// SlackConfig - slack config
+type SlackConfig struct {
+	Token     string `gluamapper:"token"`
+	ChannelID string `gluamapper:"channel_id"`
+}
+
+// Keys - public and private keys
 type Keys struct {
 	Public  string `gluamapper:"public"`
 	Private string `gluamapper:"private"`
@@ -69,7 +77,7 @@ var (
 	}
 )
 
-//Parse - parse configuration
+// Parse - parse configuration
 func Parse(configFile string) (Configuration, error) {
 	filePath, err := filepath.Abs(filepath.Clean(configFile))
 	if nil != err {
@@ -90,22 +98,22 @@ func Parse(configFile string) (Configuration, error) {
 	return config, nil
 }
 
-//Data - return configuration
+// Data - return configuration
 func (c *configuration) Data() *configuration {
 	return c
 }
 
-//LogConfig - return log config
+// LogConfig - return log config
 func (c *configuration) LogConfig() logger.Configuration {
 	return c.Logging
 }
 
-//NodesConfig - return nodes config
+// NodesConfig - return nodes config
 func (c *configuration) NodesConfig() []NodeConfig {
 	return c.Nodes
 }
 
-//String - nodes info
+// String - nodes info
 func (c *configuration) String() string {
 	var str strings.Builder
 	str.WriteString(fmt.Sprintf("Keys:\n\tpublic: \t%s\n\tprivate: \t%s\n", c.Keys.Public, c.Keys.Private))
@@ -130,20 +138,28 @@ func (c *configuration) String() string {
 		c.InfluxDB.Port,
 		c.InfluxDB.User,
 		c.InfluxDB.Password))
+	str.WriteString(fmt.Sprintf(
+		"\tslack:\n\t\ttoken:%s\n\t\tchannel ID: %s\n",
+		c.Slack.Token, c.Slack.ChannelID))
 	return str.String()
 }
 
-//Key - return key
+// Key - return key
 func (c *configuration) Key() Keys {
 	return c.Keys
 }
 
-//HeartbeatIntervalInSecond - heartbeat interval in second
+// HeartbeatIntervalInSecond - heartbeat interval in second
 func (c *configuration) HeartbeatIntervalInSecond() int {
 	return c.HeartbeatIntervalSecond
 }
 
-//Influx - return influx config
+// Influx - return influx config
 func (c *configuration) Influx() InfluxDBConfig {
 	return c.InfluxDB
+}
+
+// SlackConfig - return slack config
+func (c *configuration) SlackConfig() SlackConfig {
+	return c.Slack
 }

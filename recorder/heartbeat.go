@@ -46,6 +46,10 @@ func (h *HeartbeatSummary) String() string {
 	return fmt.Sprintf("earliest received time to now takes %s, received: %d, drop percent: %f%%", h.Duration, h.ReceivedCount, dropPercent)
 }
 
+func (h *HeartbeatSummary) Validate() bool {
+	return true
+}
+
 func neverReceive(h *HeartbeatSummary) string {
 	expectedCount := math.Floor(h.Duration.Seconds() / intervalSecond)
 	if maxReceivedCount < expectedCount {
@@ -70,8 +74,8 @@ func (h *heartbeat) Add(t time.Time, args ...interface{}) {
 	h.Unlock()
 }
 
-//RemoveOutdatedPeriodically - clean expired heartbeat record periodically
-func (h *heartbeat) RemoveOutdatedPeriodically(c clock.Clock) {
+//PeriodicRemove - clean expired heartbeat record periodically
+func (h *heartbeat) PeriodicRemove(c clock.Clock) {
 	timer := c.After(expiredTimeInterval)
 loop:
 	for {
@@ -100,7 +104,7 @@ func cleanupExpiredHeartbeat(h *heartbeat) {
 }
 
 //Summary - summarize heartbeat data
-func (h *heartbeat) Summary() interface{} {
+func (h *heartbeat) Summary() SummaryOutput {
 	h.Lock()
 
 	count := uint16(len(h.data))
@@ -174,6 +178,6 @@ func NewHeartbeat(interval float64, shutdownChan <-chan struct{}) Recorder {
 	fullCycleReceivedCount = math.Floor(expiredTimeInterval.Seconds() / interval)
 	intervalSecond = interval
 	c := clock.NewClock()
-	go h.RemoveOutdatedPeriodically(c)
+	go h.PeriodicRemove(c)
 	return h
 }
