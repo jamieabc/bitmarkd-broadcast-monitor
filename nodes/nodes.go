@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/jamieabc/bitmarkd-broadcast-monitor/messengers"
-
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/db"
 
 	"github.com/bitmark-inc/logger"
@@ -24,7 +22,6 @@ type nodes struct {
 	log          *logger.L
 	nodeArr      []node.Node
 	shutdownChan chan struct{}
-	slack        messengers.Messenger
 }
 
 // Initialise - initialise objects
@@ -45,13 +42,10 @@ func Initialise(configs configuration.Configuration) (Nodes, error) {
 		ns = append(ns, n)
 	}
 
-	slackConfig := configs.SlackConfig()
-
 	return &nodes{
 		log:          log,
 		nodeArr:      ns,
 		shutdownChan: shutdownCh,
-		slack:        messengers.NewSlack(slackConfig.Token, slackConfig.ChannelID),
 	}, nil
 }
 

@@ -14,6 +14,7 @@ const (
 	measurement            = "transaction-droprate"
 )
 
+// checkerLoop - loop to check all summaries
 func checkerLoop(n Node, rs recorders) {
 	log := n.Log()
 	transactionTimer := time.NewTimer(transactionCheckMinute)

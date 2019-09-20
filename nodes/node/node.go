@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/messengers"
+
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/recorder"
 
 	"github.com/bitmark-inc/logger"
@@ -50,14 +52,18 @@ var (
 	shutdownChan            <-chan struct{}
 	heartbeatIntervalSecond int
 	keys                    configuration.Keys
+	slack                   messengers.Messenger
 )
 
-// Initialise
+// Initialise - setup node related common variables
 func Initialise(shutdown <-chan struct{}, configs configuration.Configuration) {
 	shutdownChan = shutdown
 	recorder.Initialise(shutdown)
 	heartbeatIntervalSecond = configs.HeartbeatIntervalInSecond()
 	keys = configs.Key()
+
+	slackConfig := configs.SlackConfig()
+	slack = messengers.NewSlack(slackConfig.Token, slackConfig.ChannelID)
 }
 
 // NewNode - create new node
