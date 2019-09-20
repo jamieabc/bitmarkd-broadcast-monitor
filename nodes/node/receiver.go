@@ -28,6 +28,7 @@ const (
 	transactionTimeoutSecond  = 120 * time.Second
 	eventChannelSize          = 100
 	reconnectDelayMillisecond = 20 * time.Millisecond
+	keyLength                 = 10
 )
 
 func receiverLoop(n Node, rs recorders, id int) {
@@ -135,26 +136,44 @@ func process(n Node, rs recorders, data [][]byte) {
 
 	switch category := string(data[1]); category {
 	case blockCmdStr:
-		header, digest, _, err := blockrecord.ExtractHeader(data[2], uint64(0))
-		if nil != err {
-			log.Errorf("extract block header with error: %s", err)
-			return
+		key := string(data[2][0:keyLength])
+
+		value, found := caches.Get(key)
+		var header blockrecord.Header
+		if !found {
+			ptr, _, _, err := blockrecord.ExtractHeader(data[2], uint64(0))
+			if nil != err {
+				log.Errorf("extract block header with error: %s", err)
+				return
+			}
+			header = *ptr
+			caches.Set(key, header)
+		} else {
+			header = value.(blockrecord.Header)
 		}
-		log.Infof("receive block %d, digest %s", header.Number, digest)
+
+		log.Infof("receive block %d", header.Number)
 		rs.block.Add(now, recorder.BlockData{
-			Hash:         digest.String(),
 			Number:       header.Number,
 			GenerateTime: time.Unix(int64(header.Timestamp), 0),
 		})
 
 	case assetCmdStr, issueCmdStr, transferCmdStr:
-		bytes := data[2]
+		log.Debugf("raw %s data: %s", category, string(data[2]))
+		key := hex.EncodeToString(data[2])[0:keyLength]
 
-		log.Debugf("raw %s data: %s", category, hex.EncodeToString(bytes))
-		id, err := extractID(bytes, blockchain, log)
-		if nil != err {
-			return
+		var err error
+		var id merkle.Digest
+		value, found := caches.Get(key)
+		if !found {
+			if id, err = extractID(data[2], blockchain, log); nil != err {
+				return
+			}
+			caches.Set(key, id)
+		} else {
+			id = value.(merkle.Digest)
 		}
+
 		log.Infof("receive %s broadcast, ID %s", category, []byte(fmt.Sprintf("%v", id)))
 
 	case heartbeatCmdStr:

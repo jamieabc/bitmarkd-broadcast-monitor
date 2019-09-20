@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/cache"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/messengers"
 
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/recorder"
@@ -53,6 +54,7 @@ var (
 	heartbeatIntervalSecond int
 	keys                    configuration.Keys
 	slack                   messengers.Messenger
+	caches                  cache.Cache
 )
 
 // Initialise - setup node related common variables
@@ -64,6 +66,11 @@ func Initialise(shutdown <-chan struct{}, configs configuration.Configuration) {
 
 	slackConfig := configs.SlackConfig()
 	slack = messengers.NewSlack(slackConfig.Token, slackConfig.ChannelID)
+	var err error
+	caches, err = cache.NewCache()
+	if nil != err {
+		fmt.Printf("new cache with error: %s\n", err)
+	}
 }
 
 // NewNode - create new node
