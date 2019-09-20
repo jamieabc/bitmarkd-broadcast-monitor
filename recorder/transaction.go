@@ -40,6 +40,11 @@ func (t *TransactionSummary) String() string {
 	return fmt.Sprintf("earliest received to now %s, got %d transactions, drop percent: %f%%", t.Duration, t.ReceivedCount, dropPercent)
 }
 
+// Validate - determine if this summary needs to notify
+func (t *TransactionSummary) Validate() bool {
+	return t.Droprate <= 0.1
+}
+
 // Add - Add transaction
 func (t *transactions) Add(receivedTime time.Time, args ...interface{}) {
 	if !t.received {
@@ -114,7 +119,7 @@ func findReceivedItemFromIndex(t *transactions, start int) int {
 }
 
 // Summary - summarize transactions info, mainly droprate
-func (t *transactions) Summary() interface{} {
+func (t *transactions) Summary() SummaryOutput {
 	if indexNotFound == findFirstReceivedItemIndex(t) {
 		droprate := float64(0)
 		if t.received {

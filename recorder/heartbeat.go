@@ -46,6 +46,10 @@ func (h *HeartbeatSummary) String() string {
 	return fmt.Sprintf("earliest received time to now takes %s, received: %d, drop percent: %f%%", h.Duration, h.ReceivedCount, dropPercent)
 }
 
+func (h *HeartbeatSummary) Validate() bool {
+	return true
+}
+
 func neverReceive(h *HeartbeatSummary) string {
 	expectedCount := math.Floor(h.Duration.Seconds() / intervalSecond)
 	if maxReceivedCount < expectedCount {
@@ -100,7 +104,7 @@ func cleanupExpiredHeartbeat(h *heartbeat) {
 }
 
 //Summary - summarize heartbeat data
-func (h *heartbeat) Summary() interface{} {
+func (h *heartbeat) Summary() SummaryOutput {
 	h.Lock()
 
 	count := uint16(len(h.data))

@@ -1,6 +1,7 @@
 package recorder
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/clock"
@@ -25,7 +26,18 @@ type PeriodicRemover interface {
 
 // Summarizer - interface for summarizing status of records
 type Summarizer interface {
-	Summary() interface{}
+	Summary() SummaryOutput
+}
+
+// SummaryOutput - interface for summary output
+type SummaryOutput interface {
+	fmt.Stringer
+	Validator
+}
+
+// Validator - interface for deciding if summary output needs to notify
+type Validator interface {
+	Validate() bool
 }
 
 type expiredAt time.Time

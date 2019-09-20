@@ -83,3 +83,13 @@ func TestTransactionCleanupPeriodicallyWhenNoExpiration(t *testing.T) {
 
 	assert.Equal(t, float64(0), summary.Droprate, "wrong droprate")
 }
+
+func TestTransactionSummaryValidateWhenInvalid(t *testing.T) {
+	s := recorder.TransactionSummary{
+		Droprate:      0.2,
+		Duration:      time.Minute,
+		ReceivedCount: 10,
+	}
+
+	assert.Equal(t, false, s.Validate(), "wrong validator")
+}
