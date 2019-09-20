@@ -12,6 +12,8 @@ import (
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/fault"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/network"
 
+	//_ "net/http/pprof"
+
 	"github.com/bitmark-inc/logger"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/configuration"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/nodes"
@@ -26,6 +28,11 @@ func init() {
 }
 
 func main() {
+	// pprof
+	//go func() {
+	//	log.Println(http.ListenAndServe("localhost:6060", nil))
+	//}()
+
 	err := parseFlag()
 	if nil != err {
 		return
