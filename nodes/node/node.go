@@ -124,6 +124,16 @@ func parseKeys(keys configuration.Keys, remotePublicKeyStr string) (*nodeKeys, e
 	}, nil
 }
 
+func sendToSlack(node string, msg string) {
+	if slack.Validate() {
+		finalMsg := fmt.Sprintf("%s %s", node, msg)
+		err := slack.Send(finalMsg)
+		if nil != err {
+			fmt.Printf("send slack message %s with error: %s\n", msg, err)
+		}
+	}
+}
+
 // BroadcastReceiverClient - get zmq broadcast receiver remote
 func (n *node) BroadcastReceiver() network.Client {
 	return n.remote.BroadcastReceiver()
