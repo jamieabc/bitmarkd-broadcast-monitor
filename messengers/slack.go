@@ -22,11 +22,20 @@ func (s *slackMessenger) Send(args ...interface{}) error {
 	return nil
 }
 
+// Validate - check if slack instance successful created
+func (s *slackMessenger) Validate() bool {
+	return nil != s.client
+}
+
+// NewSlack - create slack client
 func NewSlack(token string, channelID string) Messenger {
-	client := slack.New(token)
-	return &slackMessenger{
-		channelID: channelID,
-		client:    client,
-		rtm:       client.NewRTM(),
+	if "" != token && "" != channelID {
+		client := slack.New(token)
+		return &slackMessenger{
+			channelID: channelID,
+			client:    client,
+			rtm:       client.NewRTM(),
+		}
 	}
+	return &slackMessenger{}
 }
