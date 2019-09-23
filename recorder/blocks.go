@@ -308,11 +308,11 @@ func (b *BlocksSummary) String() string {
 	)
 }
 
-// Validate - find any long confirmations that has not reported
-func (b *BlocksSummary) Validate() bool {
+// Valid - find any long confirmations that has not reported
+func (b *BlocksSummary) Valid() bool {
 	var reported []LongConfirm
-	if 0 == len(b.LongConfirms) {
-		return false
+	if 0 == len(b.LongConfirms) && 0 == len(b.Forks) {
+		return true
 	}
 
 	for _, c := range b.LongConfirms {
@@ -322,7 +322,7 @@ func (b *BlocksSummary) Validate() bool {
 		}
 	}
 
-	if 0 < len(reported) {
+	if 0 < len(reported) || 0 < len(b.Forks) {
 		b.LongConfirms = reported
 		return false
 	}

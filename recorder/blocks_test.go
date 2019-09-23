@@ -511,17 +511,11 @@ func TestSummaryWhenLongConfirmRecycled(t *testing.T) {
 	assert.Equal(t, blockNumber+2, summary.LongConfirms[0].BlockNumber, "wrong long confirm block number")
 }
 
-func TestBlockSummaryValidateWhenInvalid(t *testing.T) {
+func TestBlockSummaryValidateWhenLongConfirmsInvalid(t *testing.T) {
 	s := recorder.BlocksSummary{
 		BlockCount: 10,
 		Duration:   time.Hour,
-		Forks: []recorder.Fork{
-			{
-				Begin:     1000,
-				End:       1001,
-				ExpiredAt: time.Time{},
-			},
-		},
+		Forks:      []recorder.Fork{},
 		LongConfirms: []recorder.LongConfirm{
 			{
 				BlockNumber: 1000,
@@ -532,6 +526,34 @@ func TestBlockSummaryValidateWhenInvalid(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, false, s.Validate(), "wrong validate result")
-	assert.Equal(t, true, s.Validate(), "wrong second validate")
+	assert.Equal(t, false, s.Valid(), "wrong validate result")
+	assert.Equal(t, true, s.Valid(), "wrong second validate")
+}
+
+func TestBlockSummaryValidateWhenForksInvalid(t *testing.T) {
+	s := recorder.BlocksSummary{
+		BlockCount: 10,
+		Duration:   time.Hour,
+		Forks: []recorder.Fork{
+			{
+				Begin:     uint64(1000),
+				End:       uint64(1001),
+				ExpiredAt: time.Time{},
+			},
+		},
+		LongConfirms: []recorder.LongConfirm{},
+	}
+
+	assert.Equal(t, false, s.Valid(), "wrong validate result")
+}
+
+func TestBlockSummaryValidateWhenValid(t *testing.T) {
+	s := recorder.BlocksSummary{
+		BlockCount:   10,
+		Duration:     time.Hour,
+		Forks:        []recorder.Fork{},
+		LongConfirms: []recorder.LongConfirm{},
+	}
+
+	assert.Equal(t, true, s.Valid(), "wrong validate result")
 }
