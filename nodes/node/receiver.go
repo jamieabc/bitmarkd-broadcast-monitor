@@ -80,8 +80,9 @@ func receiverRoutine(n Node, rs recorders, id int) {
 			return
 
 		case <-transactionTimer.C:
-			log.Warn("transaction timeout exceed, reopen connection")
-			reconnect(poller, n, transactionTimer)
+			log.Warn("transaction timeout exceed, reset timer")
+			//reconnect(poller, n, transactionTimer)
+			resetTimer(transactionTimer, log)
 		}
 	}
 }
