@@ -40,8 +40,8 @@ func (t *TransactionSummary) String() string {
 	return fmt.Sprintf("earliest received to now %s, got %d transactions, drop percent: %f%%", t.Duration, t.ReceivedCount, dropPercent)
 }
 
-// Validate - determine if this summary needs to notify
-func (t *TransactionSummary) Validate() bool {
+// Valid - determine if this summary needs to notify
+func (t *TransactionSummary) Valid() bool {
 	return t.Droprate <= 0.1
 }
 

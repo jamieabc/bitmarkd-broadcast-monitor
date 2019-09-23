@@ -46,7 +46,7 @@ func (h *HeartbeatSummary) String() string {
 	return fmt.Sprintf("earliest received time to now takes %s, received: %d, drop percent: %f%%", h.Duration, h.ReceivedCount, dropPercent)
 }
 
-func (h *HeartbeatSummary) Validate() bool {
+func (h *HeartbeatSummary) Valid() bool {
 	return true
 }
 

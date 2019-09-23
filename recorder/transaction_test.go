@@ -91,5 +91,5 @@ func TestTransactionSummaryValidateWhenInvalid(t *testing.T) {
 		ReceivedCount: 10,
 	}
 
-	assert.Equal(t, false, s.Validate(), "wrong validator")
+	assert.Equal(t, false, s.Valid(), "wrong validator")
 }

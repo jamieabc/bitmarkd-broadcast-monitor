@@ -13,5 +13,5 @@ type Sender interface {
 
 // Validator - interface for deciding messenger object is valid or not
 type Validator interface {
-	Validate() bool
+	Valid() bool
 }

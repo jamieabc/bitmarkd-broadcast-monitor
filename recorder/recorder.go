@@ -37,7 +37,7 @@ type SummaryOutput interface {
 
 // Validator - interface for deciding if summary output needs to notify
 type Validator interface {
-	Validate() bool
+	Valid() bool
 }
 
 type expiredAt time.Time

@@ -36,7 +36,7 @@ func checkerLoop(n Node, rs recorders) {
 
 		case <-blockTimer.C:
 			bs := rs.block.Summary().(*recorder.BlocksSummary)
-			if !bs.Validate() {
+			if !bs.Valid() {
 				sendToSlack(n.Name(), bs.String())
 			}
 			log.Infof("block summary: %s", bs)

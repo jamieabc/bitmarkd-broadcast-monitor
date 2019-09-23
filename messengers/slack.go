@@ -22,8 +22,8 @@ func (s *slackMessenger) Send(args ...interface{}) error {
 	return nil
 }
 
-// Validate - check if slack instance successful created
-func (s *slackMessenger) Validate() bool {
+// Valid - check if slack instance successful created
+func (s *slackMessenger) Valid() bool {
 	return nil != s.client
 }
 

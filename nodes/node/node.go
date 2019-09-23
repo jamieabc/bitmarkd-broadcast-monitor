@@ -132,7 +132,7 @@ func parseKeys(keys configuration.Keys, remotePublicKeyStr string) (*nodeKeys, e
 }
 
 func sendToSlack(node string, msg string) {
-	if slack.Validate() {
+	if slack.Valid() {
 		finalMsg := fmt.Sprintf("%s %s", node, msg)
 		err := slack.Send(finalMsg)
 		if nil != err {

@@ -9,10 +9,10 @@ import (
 
 func TestSlackValidateWhenInvalid(t *testing.T) {
 	s := messengers.NewSlack("token", "")
-	assert.Equal(t, false, s.Validate(), "wrong validate")
+	assert.Equal(t, false, s.Valid(), "wrong validate")
 }
 
 func TestSlackValidateWhenValid(t *testing.T) {
 	s := messengers.NewSlack("token", "channel")
-	assert.Equal(t, true, s.Validate(), "wrong validate")
+	assert.Equal(t, true, s.Valid(), "wrong validate")
 }
