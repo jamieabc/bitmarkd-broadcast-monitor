@@ -73,7 +73,7 @@ func main() {
 	}
 
 	log.Info("initialise nodes")
-	n, err := initialiseNodes(config)
+	n, err := nodes.Initialise(config)
 	if nil != err {
 		log.Errorf("initialise nodes with error: %s", err)
 		return
@@ -124,12 +124,4 @@ func zmqAuth() error {
 		return err
 	}
 	return nil
-}
-
-func initialiseNodes(configs configuration.Configuration) (nodes.Nodes, error) {
-	node, err := nodes.Initialise(configs)
-	if nil != err {
-		return nil, err
-	}
-	return node, nil
 }
