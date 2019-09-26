@@ -3,8 +3,6 @@ package recorder
 import (
 	"fmt"
 	"time"
-
-	"github.com/jamieabc/bitmarkd-broadcast-monitor/clock"
 )
 
 // Recorder - interface for recording records
@@ -21,7 +19,7 @@ type Adder interface {
 
 // PeriodicRemover - interface for periodically removing outdated records
 type PeriodicRemover interface {
-	PeriodicRemove(clock clock.Clock)
+	PeriodicRemove(args []interface{})
 }
 
 // Summarizer - interface for summarizing status of records
@@ -48,13 +46,3 @@ const (
 	totalReceivedCount  = int(expiredTimeInterval / time.Minute)
 	indexNotFound       = -1
 )
-
-var (
-	overallEarliestTime time.Time
-)
-
-// Initialise
-func Initialise(shutdown <-chan struct{}) {
-	initialiseTransactions(shutdown)
-	overallEarliestTime = time.Now()
-}

@@ -37,12 +37,10 @@ func (s *signalPair) Receiver() *zmq.Socket {
 
 // Start - start signal pair to work
 func (s *signalPair) Start() {
-	shutdownChan := make(chan struct{})
-	go s.receiverLoop(nil)
-	<-shutdownChan
+	go s.receiverLoop()
 }
 
-func (s *signalPair) receiverLoop(shutdownChan chan struct{}) {
+func (s *signalPair) receiverLoop() {
 	for {
 		str, err := s.receiver.Recv(0)
 		if nil != err {
@@ -50,7 +48,6 @@ func (s *signalPair) receiverLoop(shutdownChan chan struct{}) {
 		}
 		s.receiverChannel <- str
 		if str == stopMsg {
-			shutdownChan <- struct{}{}
 			_ = s.stopReceiver()
 			return
 		}

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"syscall"
 
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/db"
 
@@ -80,12 +79,15 @@ func main() {
 	}
 
 	log.Info("start monitor")
-	n.Monitor()
+	go n.Monitor()
 
-	ch := make(chan os.Signal)
-	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt)
+	fmt.Println("running...")
 	<-ch
+	fmt.Println("receive interrupt")
 	n.StopMonitor()
+	fmt.Println("finish stop monitor")
 	log.Flush()
 
 	return

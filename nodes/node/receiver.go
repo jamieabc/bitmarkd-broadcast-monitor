@@ -31,15 +31,22 @@ const (
 	keyLength                 = 10
 )
 
-func receiverLoop(n Node, rs recorders, id int) {
+func receiverLoop(args []interface{}) {
+	if 3 != len(args) {
+		fmt.Println("receiverLoop wrong argument length")
+		return
+	}
+	n := args[0].(Node)
+	rs := args[1].(recorders)
+	id := args[2].(int)
 	log := n.Log()
 	timer := clock.NewClock()
 
-	go rs.transaction.PeriodicRemove(timer)
-	go rs.block.PeriodicRemove(timer)
-	go receiverRoutine(n, rs, id)
+	task.Go(rs.transaction.PeriodicRemove, timer, ctx.Done())
+	task.Go(rs.block.PeriodicRemove, timer, ctx.Done())
+	task.Go(receiverRoutine, n, rs, id)
 
-	<-shutdownChan
+	<-ctx.Done()
 
 	if err := n.Close(); nil != err {
 		log.Errorf("close connection with error: %s", err)
@@ -49,7 +56,14 @@ func receiverLoop(n Node, rs recorders, id int) {
 	return
 }
 
-func receiverRoutine(n Node, rs recorders, id int) {
+func receiverRoutine(args []interface{}) {
+	if 3 != len(args) {
+		fmt.Println("receiverRoutine wrong argument length")
+		return
+	}
+	n := args[0].(Node)
+	rs := args[1].(recorders)
+	id := args[2].(int)
 	eventChan := make(chan zmq.Polled, eventChannelSize)
 	log := n.Log()
 	transactionTimer := time.NewTimer(transactionTimeoutSecond)
@@ -60,7 +74,7 @@ func receiverRoutine(n Node, rs recorders, id int) {
 		return
 	}
 
-	go poller.Start(pollerTimeoutSecond)
+	task.Go(poller.Start, pollerTimeoutSecond, ctx.Done())
 
 	for {
 		log.Debug("waiting events...")
@@ -75,7 +89,7 @@ func receiverRoutine(n Node, rs recorders, id int) {
 			process(n, rs, data)
 			resetTimer(transactionTimer, log)
 
-		case <-shutdownChan:
+		case <-ctx.Done():
 			log.Infof("terminate receiver loop")
 			return
 

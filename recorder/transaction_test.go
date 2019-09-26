@@ -18,7 +18,6 @@ const (
 )
 
 func TestSummaryWhenEmpty(t *testing.T) {
-	setupRecorder()
 	r := recorder.NewTransaction()
 	summary := r.Summary().(*recorder.TransactionSummary)
 
@@ -26,7 +25,6 @@ func TestSummaryWhenEmpty(t *testing.T) {
 }
 
 func TestSummaryWhenNoDrop(t *testing.T) {
-	setupRecorder()
 	r := recorder.NewTransaction()
 	now := time.Now()
 	r.Add(now, txID1)
@@ -36,7 +34,6 @@ func TestSummaryWhenNoDrop(t *testing.T) {
 }
 
 func TestTransactionCleanupPeriodicallyWhenExpiration(t *testing.T) {
-	setupRecorder()
 	ctl, mock := setupTestClock(t)
 	defer ctl.Finish()
 
@@ -50,16 +47,14 @@ func TestTransactionCleanupPeriodicallyWhenExpiration(t *testing.T) {
 
 	assert.Equal(t, float64(expectedTotalReceivedCount-1)/expectedTotalReceivedCount, summary.Droprate, "wrong droprate")
 
-	go r.PeriodicRemove(mock)
+	go r.PeriodicRemove([]interface{}{mock, ctx})
 	<-time.After(10 * time.Millisecond)
-	//shutdownChan <- struct{}{}
 	summary = r.Summary().(*recorder.TransactionSummary)
 
 	assert.Equal(t, float64(1), summary.Droprate, "wrong droprate")
 }
 
 func TestTransactionCleanupPeriodicallyWhenNoExpiration(t *testing.T) {
-	setupRecorder()
 	ctl, mock := setupTestClock(t)
 	defer ctl.Finish()
 
@@ -76,9 +71,8 @@ func TestTransactionCleanupPeriodicallyWhenNoExpiration(t *testing.T) {
 
 	assert.Equal(t, float64(0), summary.Droprate, "wrong droprate")
 
-	go r.PeriodicRemove(mock)
+	go r.PeriodicRemove([]interface{}{mock, ctx})
 	<-time.After(10 * time.Millisecond)
-	shutdownChan <- struct{}{}
 	summary = r.Summary().(*recorder.TransactionSummary)
 
 	assert.Equal(t, float64(0), summary.Droprate, "wrong droprate")

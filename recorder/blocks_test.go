@@ -60,7 +60,6 @@ func TestBlocksSummaryWhenCycle(t *testing.T) {
 }
 
 func TestBlocksRemoveOutdatedPeriodicallyWhenNoExpiration(t *testing.T) {
-	setupRecorder()
 	ctl, mock := setupTestClock(t)
 	defer ctl.Finish()
 
@@ -81,16 +80,14 @@ func TestBlocksRemoveOutdatedPeriodicallyWhenNoExpiration(t *testing.T) {
 	s := b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, s.Duration >= duration, "wrong duration")
 
-	go b.PeriodicRemove(mock)
+	go b.PeriodicRemove([]interface{}{mock, ctx})
 	<-time.After(10 * time.Millisecond)
-	shutdownChan <- struct{}{}
 
 	s = b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, s.Duration >= duration, "wrong duration")
 }
 
 func TestBlocksRemoveOutdatedPeriodicallyWhenOneExpiration(t *testing.T) {
-	setupRecorder()
 	ctl, mock := setupTestClock(t)
 	defer ctl.Finish()
 
@@ -109,9 +106,8 @@ func TestBlocksRemoveOutdatedPeriodicallyWhenOneExpiration(t *testing.T) {
 	s := b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, s.Duration >= 2*time.Hour, "wrong duration")
 
-	go b.PeriodicRemove(mock)
+	go b.PeriodicRemove([]interface{}{mock, ctx})
 	<-time.After(10 * time.Millisecond)
-	shutdownChan <- struct{}{}
 
 	s = b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, s.Duration >= 2*time.Second, "wrong smaller duration")
@@ -119,7 +115,6 @@ func TestBlocksRemoveOutdatedPeriodicallyWhenOneExpiration(t *testing.T) {
 }
 
 func TestBlocksRemoveOutdatedPeriodicallyWhenManyExpiration(t *testing.T) {
-	setupRecorder()
 	ctl, mock := setupTestClock(t)
 	defer ctl.Finish()
 
@@ -136,9 +131,8 @@ func TestBlocksRemoveOutdatedPeriodicallyWhenManyExpiration(t *testing.T) {
 	s := b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, s.Duration >= 3*time.Hour, "wrong duration")
 
-	go b.PeriodicRemove(mock)
+	go b.PeriodicRemove([]interface{}{mock, ctx})
 	<-time.After(10 * time.Millisecond)
-	shutdownChan <- struct{}{}
 
 	s = b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, s.Duration <= 2*time.Hour, "wrong larger duration")
@@ -325,7 +319,6 @@ func TestSummaryWhenForkInProgressAndDropOneBlock(t *testing.T) {
 }
 
 func TestSummaryWhenForkBlockRecycledEntirely(t *testing.T) {
-	setupRecorder()
 	ctl, mock := setupTestClock(t)
 	defer ctl.Finish()
 	mock.EXPECT().NewTimer(gomock.Any()).Return(time.NewTimer(1)).Times(1)
@@ -384,9 +377,8 @@ func TestSummaryWhenForkBlockRecycledEntirely(t *testing.T) {
 		Number: blockNumber + 7,
 	})
 
-	go b.PeriodicRemove(mock)
+	go b.PeriodicRemove([]interface{}{mock, ctx})
 	<-time.After(10 * time.Millisecond)
-	shutdownChan <- struct{}{}
 
 	summary := b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, summary.Duration <= time.Second, "wrong duration")
@@ -396,7 +388,6 @@ func TestSummaryWhenForkBlockRecycledEntirely(t *testing.T) {
 }
 
 func TestSummaryWhenForkBlockRecycledPartially(t *testing.T) {
-	setupRecorder()
 	ctl, mock := setupTestClock(t)
 	defer ctl.Finish()
 	mock.EXPECT().NewTimer(gomock.Any()).Return(time.NewTimer(1)).Times(1)
@@ -439,9 +430,8 @@ func TestSummaryWhenForkBlockRecycledPartially(t *testing.T) {
 		Number: blockNumber + 5,
 	})
 
-	go b.PeriodicRemove(mock)
+	go b.PeriodicRemove([]interface{}{mock, ctx})
 	<-time.After(10 * time.Millisecond)
-	shutdownChan <- struct{}{}
 
 	summary := b.Summary().(*recorder.BlocksSummary)
 	assert.Equal(t, 1, len(summary.Forks), "wrong Fork count")
@@ -475,7 +465,6 @@ func TestSummaryWhenLongConfirmTime(t *testing.T) {
 }
 
 func TestSummaryWhenLongConfirmRecycled(t *testing.T) {
-	setupRecorder()
 	ctl, mock := setupTestClock(t)
 	defer ctl.Finish()
 	mock.EXPECT().NewTimer(gomock.Any()).Return(time.NewTimer(1)).Times(1)
@@ -502,9 +491,8 @@ func TestSummaryWhenLongConfirmRecycled(t *testing.T) {
 		GenerateTime: oneHourBefore,
 	})
 
-	go b.PeriodicRemove(mock)
+	go b.PeriodicRemove([]interface{}{mock, ctx})
 	<-time.After(10 * time.Millisecond)
-	shutdownChan <- struct{}{}
 
 	summary := b.Summary().(*recorder.BlocksSummary)
 	assert.Equal(t, 1, len(summary.LongConfirms), "wrong long confirm count")

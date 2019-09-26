@@ -106,8 +106,14 @@ func (p *poller) remove() {
 }
 
 // Start - polling event
-func (p *poller) Start(timeout time.Duration) {
-	go waitShutdownEvent(p)
+func (p *poller) Start(args []interface{}) {
+	if 2 != len(args) {
+		fmt.Println("poller Start wrong argument length")
+		return
+	}
+	timeout := args[0].(time.Duration)
+	shutdown := args[1].(<-chan struct{})
+	go waitShutdownEvent(p, shutdown)
 
 	for {
 		p.Lock()
@@ -122,7 +128,7 @@ func (p *poller) Start(timeout time.Duration) {
 				return
 			}
 
-			//de-duplicate polled events
+			// de-duplicate polled events
 			p.eventChan <- zmqEvent
 			<-time.After(1 * time.Second)
 		}
@@ -135,8 +141,8 @@ func (p *poller) stop() {
 	p.signalPair.Stop()
 }
 
-func waitShutdownEvent(p *poller) {
-	<-p.shutdownChan
+func waitShutdownEvent(p *poller, shutdown <-chan struct{}) {
+	<-shutdown
 	p.stop()
 }
 
@@ -144,5 +150,5 @@ func waitShutdownEvent(p *poller) {
 type Poller interface {
 	Add(client Client, events zmq.State)
 	Remove(client Client)
-	Start(timeout time.Duration)
+	Start(args []interface{})
 }

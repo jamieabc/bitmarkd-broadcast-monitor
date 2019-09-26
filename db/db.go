@@ -20,5 +20,5 @@ type Adder interface {
 
 //Looper - loop to periodic write
 type Looper interface {
-	Loop(chan struct{})
+	Loop(<-chan struct{})
 }

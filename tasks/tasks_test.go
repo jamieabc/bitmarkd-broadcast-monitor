@@ -15,7 +15,7 @@ func TestDone(t *testing.T) {
 	var wgGoroutineReady sync.WaitGroup
 	wgGoroutineReady.Add(2)
 
-	myTask.Go(func(args ...interface{}) {
+	myTask.Go(func(args []interface{}) {
 		wgGoroutineReady.Done()
 		select {
 		case <-ctx.Done():
@@ -23,7 +23,7 @@ func TestDone(t *testing.T) {
 		}
 	})
 
-	myTask.Go(func(args ...interface{}) {
+	myTask.Go(func(args []interface{}) {
 		wgGoroutineReady.Done()
 		select {
 		case <-ctx.Done():

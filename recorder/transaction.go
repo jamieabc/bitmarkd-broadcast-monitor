@@ -9,12 +9,10 @@ import (
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/clock"
 )
 
-// this variable stores superset of all transactions
-var shutdownChan <-chan struct{}
-
 type transactions struct {
 	sync.Mutex
 	data                  [totalReceivedCount]bool
+	earliest              time.Time
 	firstItemReceivedTime time.Time
 	received              bool
 }
@@ -69,17 +67,24 @@ func (t *transactions) add(receivedTime time.Time, args ...interface{}) {
 }
 
 // PeriodicRemove - clean expired transaction periodically
-func (t *transactions) PeriodicRemove(c clock.Clock) {
+func (t *transactions) PeriodicRemove(args []interface{}) {
+	if 2 != len(args) {
+		fmt.Println("transaction PeriodicRemove wrong argument length")
+		return
+	}
+	c := args[0].(clock.Clock)
+	shutdown := args[1].(<-chan struct{})
 loop:
 	for {
 		select {
-		case <-shutdownChan:
+		case <-shutdown:
 			break loop
 
 		case <-c.After(expiredTimeInterval):
 			cleanupExpiredTransaction(t)
 		}
 	}
+	fmt.Println("terminate transaction PeriodicRemove")
 }
 
 func cleanupExpiredTransaction(t *transactions) {
@@ -170,11 +175,9 @@ func receivedCountFromPrevTwoHour(data [totalReceivedCount]bool) float64 {
 	return count
 }
 
-func initialiseTransactions(shutdown <-chan struct{}) {
-	shutdownChan = shutdown
-}
-
 // NewTransaction - new transaction
 func NewTransaction() Recorder {
-	return &transactions{}
+	return &transactions{
+		earliest: time.Now(),
+	}
 }

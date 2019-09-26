@@ -2,8 +2,11 @@ package node
 
 import (
 	"bytes"
+	"context"
 	"encoding/hex"
 	"fmt"
+
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/tasks"
 
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/cache"
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/messengers"
@@ -21,7 +24,7 @@ type Node interface {
 	Close() error
 	CommandSender() network.Client
 	Log() *logger.L
-	Monitor()
+	Monitor([]interface{})
 	Name() string
 	Remote() Remote
 }
@@ -50,19 +53,20 @@ type nodeKeys struct {
 }
 
 var (
-	shutdownChan            <-chan struct{}
 	heartbeatIntervalSecond int
 	keys                    configuration.Keys
 	slack                   messengers.Messenger
 	caches                  cache.Cache
+	task                    tasks.Tasks
+	ctx                     context.Context
 )
 
 // Initialise - setup node related common variables
-func Initialise(shutdown <-chan struct{}, configs configuration.Configuration) {
-	shutdownChan = shutdown
-	recorder.Initialise(shutdown)
+func Initialise(configs configuration.Configuration, t tasks.Tasks, context context.Context) {
 	heartbeatIntervalSecond = configs.HeartbeatIntervalInSecond()
 	keys = configs.Key()
+	task = t
+	ctx = context
 
 	slackConfig := configs.SlackConfig()
 	slack = messengers.NewSlack(slackConfig.Token, slackConfig.ChannelID)
@@ -80,7 +84,7 @@ func NewNode(config configuration.NodeConfig, idx int) (intf Node, err error) {
 	n := &node{
 		blockRecorder:       recorder.NewBlock(),
 		config:              config,
-		heartbeatRecorder:   recorder.NewHeartbeat(float64(heartbeatIntervalSecond), shutdownChan),
+		heartbeatRecorder:   recorder.NewHeartbeat(float64(heartbeatIntervalSecond), task, ctx),
 		id:                  idx,
 		log:                 log,
 		name:                config.Name,
@@ -170,7 +174,7 @@ func (n *node) Log() *logger.L {
 }
 
 // Monitor - start to monitor
-func (n *node) Monitor() {
+func (n *node) Monitor(args []interface{}) {
 	rs := recorders{
 		heartbeat:   n.heartbeatRecorder,
 		transaction: n.transactionRecorder,
@@ -178,14 +182,14 @@ func (n *node) Monitor() {
 	}
 
 	n.log.Info("start to monitor")
-	go receiverLoop(n, rs, n.id)
-	go checkerLoop(n, rs)
+	task.Go(receiverLoop, n, rs, n.id)
+	task.Go(checkerLoop, n, rs)
 
 	if n.config.CommandPort != "" {
-		go senderLoop(n)
+		task.Go(senderLoop, n)
 	}
 
-	<-shutdownChan
+	<-ctx.Done()
 
 	n.Log().Info("stop")
 	return

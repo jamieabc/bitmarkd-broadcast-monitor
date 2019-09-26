@@ -69,7 +69,7 @@ func (i *Influx) Add(data InfluxData) {
 }
 
 //Loop - background loop
-func (i *Influx) Loop(shutdownChan chan struct{}) {
+func (i *Influx) Loop(shutdownChan <-chan struct{}) {
 	if !i.isDBOK() {
 		return
 	}
@@ -205,12 +205,13 @@ func Add(data InfluxData) {
 }
 
 //Start - start background loop
-func Start(shutdownChan chan struct{}) {
+func Start(args []interface{}) {
+	shutdown := args[0].(<-chan struct{})
 	if !internalData.isDBOK() {
 		return
 	}
 
-	internalData.Loop(shutdownChan)
-	<-shutdownChan
+	internalData.Loop(shutdown)
+	<-shutdown
 	internalData.Log.Info("shutdown")
 }

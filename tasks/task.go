@@ -1,24 +1,30 @@
 package tasks
 
 import (
+	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"golang.org/x/net/context"
 )
 
 type task struct {
-	cancel context.CancelFunc
-	done   chan<- struct{}
-	wg     sync.WaitGroup
+	cancel  context.CancelFunc
+	done    chan<- struct{}
+	wg      sync.WaitGroup
+	counter uint64
 }
 
 // Go - invoke a goroutine to run
 // execution function needs to receive context.Done signal
-func (t *task) Go(exec executionFunction) {
+func (t *task) Go(exec executionFunction, args ...interface{}) {
 	go func(t *task) {
 		t.wg.Add(1)
-		exec()
+		atomic.AddUint64(&t.counter, 1)
+		exec(args)
+		atomic.AddUint64(&t.counter, ^uint64(0))
 		t.wg.Done()
+		fmt.Printf("counter: %d\n", t.counter)
 	}(t)
 }
 

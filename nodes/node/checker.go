@@ -1,6 +1,7 @@
 package node
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/db"
@@ -15,14 +16,20 @@ const (
 )
 
 // checkerLoop - loop to check all summaries
-func checkerLoop(n Node, rs recorders) {
+func checkerLoop(args []interface{}) {
+	if 2 != len(args) {
+		fmt.Println("checkerLoop wrong argument length")
+		return
+	}
+	n := args[0].(Node)
+	rs := args[1].(recorders)
 	log := n.Log()
 	transactionTimer := time.NewTimer(transactionCheckMinute)
 	blockTimer := time.NewTimer(blockCheckMinute)
 
 	for {
 		select {
-		case <-shutdownChan:
+		case <-ctx.Done():
 			log.Info("terminate checker loop")
 			return
 

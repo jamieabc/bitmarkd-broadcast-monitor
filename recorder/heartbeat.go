@@ -1,19 +1,22 @@
 package recorder
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"sync"
 	"time"
+
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/tasks"
 
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/clock"
 )
 
 type heartbeat struct {
 	sync.Mutex
-	data         map[receivedAt]expiredAt
-	received     bool
-	shutdownChan <-chan struct{}
+	data     map[receivedAt]expiredAt
+	earliest time.Time
+	received bool
 }
 
 //HeartbeatSummary - summary of heartbeat data
@@ -75,18 +78,25 @@ func (h *heartbeat) Add(t time.Time, args ...interface{}) {
 }
 
 //PeriodicRemove - clean expired heartbeat record periodically
-func (h *heartbeat) PeriodicRemove(c clock.Clock) {
+func (h *heartbeat) PeriodicRemove(args []interface{}) {
+	if 2 != len(args) {
+		fmt.Println("heartbeat PeriodicRemove wrong arguments length")
+		return
+	}
+	c := args[0].(clock.Clock)
+	shutdown := args[1].(<-chan struct{})
 	timer := c.After(expiredTimeInterval)
 loop:
 	for {
 		select {
-		case <-h.shutdownChan:
+		case <-shutdown:
 			break loop
 		case <-timer:
 			cleanupExpiredHeartbeat(h)
 			timer = c.After(time.Duration(intervalSecond) * time.Second)
 		}
 	}
+	fmt.Println("terminate heartbeat PeriodicRemove")
 }
 
 func cleanupExpiredHeartbeat(h *heartbeat) {
@@ -109,7 +119,7 @@ func (h *heartbeat) Summary() SummaryOutput {
 
 	count := uint16(len(h.data))
 	duration, earliest := durationFromEarliestReceive(h)
-	updateOverallEarliestTime(earliest)
+	updateOverallEarliestTime(h, earliest)
 
 	h.Unlock()
 
@@ -122,15 +132,16 @@ func (h *heartbeat) Summary() SummaryOutput {
 
 }
 
-func updateOverallEarliestTime(earliest time.Time) {
-	if earliest.Before(overallEarliestTime) {
-		overallEarliestTime = earliest
+func updateOverallEarliestTime(h *heartbeat, earliest time.Time) {
+	if earliest.Before(h.earliest) {
+		h.earliest = earliest
 	}
 }
 
 func durationFromEarliestReceive(h *heartbeat) (time.Duration, time.Time) {
-	earliest := overallEarliestTime
-	latest := time.Time{}
+	earliest := h.earliest
+	latest := h.earliest
+
 	for k := range h.data {
 		if earliest.After(time.Time(k)) {
 			earliest = time.Time(k)
@@ -170,14 +181,14 @@ func (h *heartbeat) droprate(actualReceived uint16, duration time.Duration) floa
 }
 
 //NewHeartbeat - new heartbeat
-func NewHeartbeat(interval float64, shutdownChan <-chan struct{}) Recorder {
+func NewHeartbeat(interval float64, t tasks.Tasks, ctx context.Context) Recorder {
 	h := &heartbeat{
-		data:         make(map[receivedAt]expiredAt),
-		shutdownChan: shutdownChan,
+		data:     make(map[receivedAt]expiredAt),
+		earliest: time.Now(),
 	}
 	fullCycleReceivedCount = math.Floor(expiredTimeInterval.Seconds() / interval)
 	intervalSecond = interval
 	c := clock.NewClock()
-	go h.PeriodicRemove(c)
+	t.Go(h.PeriodicRemove, c, ctx.Done())
 	return h
 }
