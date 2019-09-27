@@ -44,6 +44,7 @@ type LongConfirm struct {
 type blocks struct {
 	sync.Mutex
 	data           [dataLength]BlockData
+	earliest       time.Time
 	latestBlock    BlockData
 	forkInProgress bool
 	forks          []Fork
@@ -149,12 +150,18 @@ func nextID(b *blocks) {
 }
 
 // PeriodicRemove - periodically remove outdated item
-func (b *blocks) PeriodicRemove(c clock.Clock) {
+func (b *blocks) PeriodicRemove(args []interface{}) {
+	if 2 != len(args) {
+		fmt.Printf("blocks PeriodicRemove wrong arguments length\n")
+		return
+	}
+	c := args[0].(clock.Clock)
+	shutdown := args[1].(<-chan struct{})
 	timer := c.NewTimer(expiredTimeInterval)
 loop:
 	for {
 		select {
-		case <-shutdownChan:
+		case <-shutdown:
 			break loop
 
 		case <-timer.C:
@@ -167,6 +174,7 @@ loop:
 			timer.Reset(expiredTimeInterval)
 		}
 	}
+	fmt.Println("terminate blocks PeriodicRemove")
 }
 
 func cleanupExpiredBlocks(b *blocks, now time.Time) {
@@ -356,6 +364,7 @@ func confirmInfo(longConfirms []LongConfirm) string {
 // NewBlock - new blocks data structure
 func NewBlock() Recorder {
 	return &blocks{
+		earliest:     time.Now(),
 		forks:        make([]Fork, 0),
 		longConfirms: make([]LongConfirm, 0),
 	}

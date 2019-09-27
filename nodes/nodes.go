@@ -1,8 +1,10 @@
 package nodes
 
 import (
-	"fmt"
+	"context"
 	"sync"
+
+	"github.com/jamieabc/bitmarkd-broadcast-monitor/tasks"
 
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/db"
 
@@ -19,20 +21,25 @@ type Nodes interface {
 
 type nodes struct {
 	sync.RWMutex
-	log          *logger.L
-	nodeArr      []node.Node
-	shutdownChan chan struct{}
+	done    <-chan struct{}
+	cancel  context.CancelFunc
+	ctx     context.Context
+	log     *logger.L
+	nodeArr []node.Node
+	tasks   tasks.Tasks
 }
 
 // Initialise - initialise objects
 func Initialise(configs configuration.Configuration) (Nodes, error) {
 	var ns []node.Node
 	log := logger.New("nodes")
-	shutdownCh := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	t := tasks.NewTasks(done, cancel)
 
 	nodeConfigs := configs.NodesConfig()
-	node.Initialise(shutdownCh, configs)
-	go db.Start(shutdownCh)
+	node.Initialise(configs, t, ctx)
+	t.Go(db.Start, ctx.Done())
 
 	for idx, c := range nodeConfigs {
 		n, err := node.NewNode(c, idx)
@@ -43,9 +50,12 @@ func Initialise(configs configuration.Configuration) (Nodes, error) {
 	}
 
 	return &nodes{
-		log:          log,
-		nodeArr:      ns,
-		shutdownChan: shutdownCh,
+		cancel:  cancel,
+		ctx:     ctx,
+		done:    done,
+		log:     log,
+		nodeArr: ns,
+		tasks:   t,
 	}, nil
 }
 
@@ -53,10 +63,10 @@ func Initialise(configs configuration.Configuration) (Nodes, error) {
 func (n *nodes) Monitor() {
 	n.log.Info("start monitor")
 	for _, connectedNode := range n.nodeArr {
-		go connectedNode.Monitor()
+		n.tasks.Go(connectedNode.Monitor)
 	}
 
-	<-n.shutdownChan
+	<-n.ctx.Done()
 	n.log.Info("receive stop signal")
 	n.log.Flush()
 }
@@ -64,7 +74,7 @@ func (n *nodes) Monitor() {
 // StopMonitor - stop monitor
 func (n *nodes) StopMonitor() {
 	n.log.Infof("stop monitor")
-	fmt.Printf("stop\n")
-	close(n.shutdownChan)
+	go n.tasks.Done()
 	n.log.Flush()
+	<-n.done
 }

@@ -1,6 +1,7 @@
 package node
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/bitmark-inc/bitmarkd/blockrecord"
@@ -13,13 +14,18 @@ const (
 	checkIntervalSecond = 5 * time.Minute
 )
 
-func senderLoop(n Node) {
+func senderLoop(args []interface{}) {
+	if 1 != len(args) {
+		fmt.Println("senderLoop wrong argument length")
+		return
+	}
+	n := args[0].(Node)
 	log := n.Log()
 	timer := time.NewTimer(checkIntervalSecond)
 
 	for {
 		select {
-		case <-shutdownChan:
+		case <-ctx.Done():
 			log.Infof("terminate sender loop")
 			return
 

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"syscall"
 
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/db"
 
@@ -73,19 +72,20 @@ func main() {
 	}
 
 	log.Info("initialise nodes")
-	n, err := initialiseNodes(config)
+	n, err := nodes.Initialise(config)
 	if nil != err {
 		log.Errorf("initialise nodes with error: %s", err)
 		return
 	}
 
-	log.Info("start monitor")
-	n.Monitor()
+	go n.Monitor()
 
-	ch := make(chan os.Signal)
-	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt)
 	<-ch
+	fmt.Println("receive interrupt")
 	n.StopMonitor()
+	fmt.Println("finish stop monitor")
 	log.Flush()
 
 	return
@@ -124,12 +124,4 @@ func zmqAuth() error {
 		return err
 	}
 	return nil
-}
-
-func initialiseNodes(configs configuration.Configuration) (nodes.Nodes, error) {
-	node, err := nodes.Initialise(configs)
-	if nil != err {
-		return nil, err
-	}
-	return node, nil
 }
