@@ -121,6 +121,7 @@ func zmqAuth() error {
 	err := network.StartAuthentication()
 	if nil != err {
 		_, _ = fmt.Fprintf(os.Stderr, "zmq auth fail with error: %s\n", err)
+
 		return err
 	}
 	return nil
