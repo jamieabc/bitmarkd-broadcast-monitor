@@ -78,12 +78,10 @@ func main() {
 		return
 	}
 
-	log.Info("start monitor")
 	go n.Monitor()
 
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, os.Interrupt)
-	fmt.Println("running...")
 	<-ch
 	fmt.Println("receive interrupt")
 	n.StopMonitor()

@@ -91,6 +91,7 @@ func receiverRoutine(args []interface{}) {
 
 		case <-ctx.Done():
 			log.Infof("terminate receiver loop")
+			close(eventChan)
 			return
 
 		case <-transactionTimer.C:

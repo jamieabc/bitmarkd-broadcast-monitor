@@ -2,7 +2,6 @@ package nodes
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/jamieabc/bitmarkd-broadcast-monitor/tasks"
@@ -75,8 +74,7 @@ func (n *nodes) Monitor() {
 // StopMonitor - stop monitor
 func (n *nodes) StopMonitor() {
 	n.log.Infof("stop monitor")
-	fmt.Printf("stop\n")
-	n.tasks.Done()
+	go n.tasks.Done()
 	n.log.Flush()
 	<-n.done
 }

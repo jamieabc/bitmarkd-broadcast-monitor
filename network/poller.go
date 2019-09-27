@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/bitmark-inc/logger"
-
 	zmq "github.com/pebbe/zmq4"
 )
 
@@ -73,7 +72,7 @@ func (p *poller) Add(client Client, events zmq.State) {
 	p.poll.Add(socket, events)
 }
 
-//PeriodicRemove - queue a client to remove
+// PeriodicRemove - queue a client to remove
 func (p *poller) Remove(client Client) {
 	p.Lock()
 	p.removeQueue = append(p.removeQueue, client)
@@ -115,26 +114,29 @@ func (p *poller) Start(args []interface{}) {
 	shutdown := args[1].(<-chan struct{})
 	go waitShutdownEvent(p, shutdown)
 
+loop:
 	for {
 		p.Lock()
 		poll := p.poll
 		p.Unlock()
 
-		polled, _ := poll.Poll(timeout)
+		polled, err := poll.Poll(timeout)
+		if nil != err {
+			logger.Criticalf("poll with error: %s\n", err)
+			break loop
+		}
 
 		for _, zmqEvent := range polled {
 			if p.signalPair.Receiver() == zmqEvent.Socket {
-				logger.Critical("receive internal signal pair, terminate")
-				return
+				break loop
 			}
 
 			// de-duplicate polled events
 			p.eventChan <- zmqEvent
 			<-time.After(1 * time.Second)
 		}
-
-		p.remove()
 	}
+	p.remove()
 }
 
 func (p *poller) stop() {
