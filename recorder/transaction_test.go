@@ -47,7 +47,7 @@ func TestTransactionCleanupPeriodicallyWhenExpiration(t *testing.T) {
 
 	assert.Equal(t, float64(expectedTotalReceivedCount-1)/expectedTotalReceivedCount, summary.Droprate, "wrong droprate")
 
-	go r.PeriodicRemove([]interface{}{mock, ctx})
+	go r.PeriodicRemove([]interface{}{mock, ctx.Done()})
 	<-time.After(10 * time.Millisecond)
 	summary = r.Summary().(*recorder.TransactionSummary)
 
@@ -71,7 +71,7 @@ func TestTransactionCleanupPeriodicallyWhenNoExpiration(t *testing.T) {
 
 	assert.Equal(t, float64(0), summary.Droprate, "wrong droprate")
 
-	go r.PeriodicRemove([]interface{}{mock, ctx})
+	go r.PeriodicRemove([]interface{}{mock, ctx.Done()})
 	<-time.After(10 * time.Millisecond)
 	summary = r.Summary().(*recorder.TransactionSummary)
 

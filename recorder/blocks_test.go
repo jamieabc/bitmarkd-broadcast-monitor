@@ -80,7 +80,7 @@ func TestBlocksRemoveOutdatedPeriodicallyWhenNoExpiration(t *testing.T) {
 	s := b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, s.Duration >= duration, "wrong duration")
 
-	go b.PeriodicRemove([]interface{}{mock, ctx})
+	go b.PeriodicRemove([]interface{}{mock, ctx.Done()})
 	<-time.After(10 * time.Millisecond)
 
 	s = b.Summary().(*recorder.BlocksSummary)
@@ -106,7 +106,7 @@ func TestBlocksRemoveOutdatedPeriodicallyWhenOneExpiration(t *testing.T) {
 	s := b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, s.Duration >= 2*time.Hour, "wrong duration")
 
-	go b.PeriodicRemove([]interface{}{mock, ctx})
+	go b.PeriodicRemove([]interface{}{mock, ctx.Done()})
 	<-time.After(10 * time.Millisecond)
 
 	s = b.Summary().(*recorder.BlocksSummary)
@@ -131,7 +131,7 @@ func TestBlocksRemoveOutdatedPeriodicallyWhenManyExpiration(t *testing.T) {
 	s := b.Summary().(*recorder.BlocksSummary)
 	assert.True(t, s.Duration >= 3*time.Hour, "wrong duration")
 
-	go b.PeriodicRemove([]interface{}{mock, ctx})
+	go b.PeriodicRemove([]interface{}{mock, ctx.Done()})
 	<-time.After(10 * time.Millisecond)
 
 	s = b.Summary().(*recorder.BlocksSummary)
@@ -377,7 +377,7 @@ func TestSummaryWhenForkBlockRecycledEntirely(t *testing.T) {
 		Number: blockNumber + 7,
 	})
 
-	go b.PeriodicRemove([]interface{}{mock, ctx})
+	go b.PeriodicRemove([]interface{}{mock, ctx.Done()})
 	<-time.After(10 * time.Millisecond)
 
 	summary := b.Summary().(*recorder.BlocksSummary)
@@ -430,7 +430,7 @@ func TestSummaryWhenForkBlockRecycledPartially(t *testing.T) {
 		Number: blockNumber + 5,
 	})
 
-	go b.PeriodicRemove([]interface{}{mock, ctx})
+	go b.PeriodicRemove([]interface{}{mock, ctx.Done()})
 	<-time.After(10 * time.Millisecond)
 
 	summary := b.Summary().(*recorder.BlocksSummary)
@@ -491,7 +491,7 @@ func TestSummaryWhenLongConfirmRecycled(t *testing.T) {
 		GenerateTime: oneHourBefore,
 	})
 
-	go b.PeriodicRemove([]interface{}{mock, ctx})
+	go b.PeriodicRemove([]interface{}{mock, ctx.Done()})
 	<-time.After(10 * time.Millisecond)
 
 	summary := b.Summary().(*recorder.BlocksSummary)
