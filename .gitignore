@@ -1,3 +1,11 @@
+# config
 monitor.conf
+
+# log
 log/*
+
+# executrable
 bitmarkd-broadcast-monitor
+
+# ansible
+ansible/*.conf
