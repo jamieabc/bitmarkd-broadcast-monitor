@@ -1,0 +1,38 @@
+---
+- hosts: heartbeat
+  vars:
+    home: /home/ubuntu
+    go_root_bin: /usr/local/go/bin
+    go_bin: "{{ home }}/gocode/bin"
+    program: bitmarkd-broadcast-monitor
+    dir: monitor
+    config_file: monitor.conf
+
+  environment:
+    GOPATH: "{{ home }}/gocode"
+    GO111MODULE: "on"
+
+  tasks:
+    - name: terminate existing program
+      shell: "pkill {{ program }} || true"
+
+    - name: create monitor directory
+      file: path="~/{{ dir }}" state=directory mode=0755
+
+    - name: create monitor log directory
+      file: path="~/{{ dir }}/log" state=directory mode=0755
+
+    - name: copy monitor config file
+      template:
+        src: monitor.conf
+        dest: "{{ dir }}/{{ config_file }}"
+
+    - name: udpate monitor program
+      shell: "{{ go_root_bin }}/go get -u github.com/jamieabc/{{ program }}"
+
+    - name: start to monitor
+      shell: "{{ go_bin }}/{{ program }} -c {{ config_file }}"
+      args:
+        chdir: "{{ dir }}"
+      async: 45
+      poll: 0
