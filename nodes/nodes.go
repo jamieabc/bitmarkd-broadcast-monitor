@@ -75,6 +75,6 @@ func (n *nodes) Monitor() {
 func (n *nodes) StopMonitor() {
 	n.log.Infof("stop monitor")
 	go n.tasks.Done()
-	n.log.Flush()
 	<-n.done
+	n.log.Flush()
 }

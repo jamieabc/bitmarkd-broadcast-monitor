@@ -142,6 +142,8 @@ func sendToSlack(node string, msg string) {
 		if nil != err {
 			fmt.Printf("send slack message %s with error: %s\n", msg, err)
 		}
+	} else {
+		fmt.Printf("invalid slack instance\n")
 	}
 }
 

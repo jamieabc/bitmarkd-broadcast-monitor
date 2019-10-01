@@ -181,7 +181,11 @@ func cleanupExpiredBlocks(b *blocks, now time.Time) {
 	expiredTime := now.Add(-1 * expiredTimeInterval)
 	startIdx, endIdx := indexNotFound, indexNotFound
 	for i := 0; i < dataLength; i++ {
-		if !b.data[i].isEmpty() && b.data[i].ReceivedTime.After(expiredTime) {
+		if b.data[i].isEmpty() {
+			break
+		}
+
+		if b.data[i].ReceivedTime.After(expiredTime) {
 			if indexNotFound == startIdx {
 				startIdx = i
 				endIdx = i
@@ -230,97 +234,110 @@ func cleanupExpiredLongConfirms(b *blocks, now time.Time) {
 
 // Summary - summarize blocks stat
 func (b *blocks) Summary() SummaryOutput {
-	duration, startBlock, endBlock := summarize(b)
+	duration, blockCount, missingBlocks := summarize(b)
 	return &BlocksSummary{
-		BlockCount:   countBlock(startBlock, endBlock),
-		Duration:     duration,
-		Forks:        b.forks,
-		LongConfirms: b.longConfirms,
+		BlockCount:    blockCount,
+		Duration:      duration,
+		Forks:         b.forks,
+		LongConfirms:  b.longConfirms,
+		MissingBlocks: missingBlocks,
 	}
 }
 
-func countBlock(startBlock uint64, endBlock uint64) uint64 {
-	if 0 == startBlock && 0 == endBlock {
-		return uint64(0)
-	} else if 0 == endBlock {
-		return uint64(1)
-	} else {
-		return endBlock - startBlock + 1
-	}
-}
-
-func summarize(b *blocks) (time.Duration, uint64, uint64) {
+func summarize(b *blocks) (time.Duration, uint64, []uint64) {
 	if (time.Time{}) == b.data[0].ReceivedTime {
-		return time.Duration(0), uint64(0), uint64(0)
+		return time.Duration(0), uint64(0), nil
 	}
 
-	earliestTime := b.data[0].ReceivedTime
-	var index int
-	for i := 0; i < dataLength; i++ {
-		t := b.data[i].ReceivedTime
-		if (time.Time{}) == t {
+	sorted := sortArray(b)
+	count, missing := missingBlocks(sorted)
+	return time.Now().Sub(sorted[0].ReceivedTime), uint64(count), missing
+}
+
+func sortArray(b *blocks) []BlockData {
+	startIndex, endIndex := findBlockStartAndEnd(b)
+	if startIndex <= endIndex {
+		return b.data[startIndex : endIndex+1]
+	}
+	return append(b.data[startIndex:dataLength], b.data[:endIndex+1]...)
+}
+
+// assumes block number comes in order, blocks may be dropped but never comes
+// dis-order, because block is assumed to be generated roughly about 2 minutes,
+// thus this assumption should be true
+func findBlockStartAndEnd(b *blocks) (startIndex, endIndex int) {
+	earliest := b.data[startIndex].Number
+	latest := b.data[startIndex].Number
+
+	for i := 1; i < dataLength; i++ {
+		if b.data[i].isEmpty() {
 			break
 		}
-		if earliestTime.After(t) {
-			earliestTime = t
-			index = i
-			continue
+
+		current := b.data[i].Number
+		if earliest > current {
+			startIndex = i
+			earliest = current
+		} else if latest < current {
+			endIndex = i
+			latest = current
 		}
 	}
 
-	// in case array is not fully filled, need to check previous BlockData
-	prevBlockNumber := prevBlockNumber(b.data, index)
-	nextBlockNumber := nextBlockNumber(b.data, index)
-	var endBlockNumber uint64
-	if prevBlockNumber >= nextBlockNumber {
-		endBlockNumber = prevBlockNumber
-	} else {
-		endBlockNumber = nextBlockNumber
-	}
-	return time.Now().Sub(earliestTime), b.data[index].Number, endBlockNumber
+	return
 }
 
-func nextBlockNumber(b [dataLength]BlockData, index int) uint64 {
-	nextBlockID := index + 1
-	if dataLength-1 == index {
-		nextBlockID = 0
-	}
-	return b[nextBlockID].Number
-}
+func missingBlocks(blocks []BlockData) (int, []uint64) {
+	mappings := make(map[uint64]string)
+	keys := make([]uint64, 0)
 
-func prevBlockNumber(b [dataLength]BlockData, index int) uint64 {
-	prevBlockID := index - 1
-	if 0 == index {
-		prevBlockID = dataLength - 1
+	for _, b := range blocks {
+		if _, ok := mappings[b.Number]; !ok {
+			mappings[b.Number] = ""
+			keys = append(keys, b.Number)
+		}
 	}
-	return b[prevBlockID].Number
+
+	missing := make([]uint64, 0)
+	for i := blocks[0].Number; i < blocks[len(blocks)-1].Number; i++ {
+		if _, ok := mappings[i]; !ok {
+			missing = append(missing, i)
+		}
+	}
+	return len(keys), missing
 }
 
 // BlocksSummary - BlockData summary data structure
 type BlocksSummary struct {
-	BlockCount   uint64
-	Duration     time.Duration
-	Forks        []Fork
-	LongConfirms []LongConfirm // confirm time longer than 30 minutes
+	BlockCount    uint64
+	Duration      time.Duration
+	Forks         []Fork
+	LongConfirms  []LongConfirm // confirm time longer than 30 minutes
+	MissingBlocks []uint64
 }
 
 func (b *BlocksSummary) String() string {
 	return fmt.Sprintf(
-		"receive %d blolcks in %s, forks: %d, long confirms: %d\n%s\n%s",
+		"receive %d blolcks in %s, forks: %d, long confirms: %d, missing blocks: %v\n%s\n%s",
 		b.BlockCount,
 		b.Duration,
 		len(b.Forks),
 		len(b.LongConfirms),
+		b.MissingBlocks,
 		forkInfo(b.Forks),
 		confirmInfo(b.LongConfirms),
 	)
 }
 
-// Valid - find any long confirmations that has not reported
+// Valid - any long confirmation, fork, or block not continuous that has not reported
 func (b *BlocksSummary) Valid() bool {
 	var reported []LongConfirm
-	if 0 == len(b.LongConfirms) && 0 == len(b.Forks) {
+	if 0 == len(b.LongConfirms) && 0 == len(b.Forks) && 0 == len(b.MissingBlocks) {
 		return true
+	}
+
+	if 0 < len(b.MissingBlocks) {
+		return false
 	}
 
 	for _, c := range b.LongConfirms {
@@ -334,6 +351,7 @@ func (b *BlocksSummary) Valid() bool {
 		b.LongConfirms = reported
 		return false
 	}
+
 	return true
 }
 

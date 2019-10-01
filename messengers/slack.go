@@ -31,10 +31,12 @@ func (s *slackMessenger) Valid() bool {
 func NewSlack(token string, channelID string) Messenger {
 	if "" != token && "" != channelID {
 		client := slack.New(token)
+		rtm := client.NewRTM()
+		go rtm.ManageConnection()
 		return &slackMessenger{
 			channelID: channelID,
 			client:    client,
-			rtm:       client.NewRTM(),
+			rtm:       rtm,
 		}
 	}
 	return &slackMessenger{}
