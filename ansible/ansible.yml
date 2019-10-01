@@ -3,36 +3,51 @@
   vars:
     home: /home/ubuntu
     go_root_bin: /usr/local/go/bin
-    go_bin: "{{ home }}/gocode/bin"
     program: bitmarkd-broadcast-monitor
     dir: monitor
     config_file: monitor.conf
+    empty_char: /dev/null
 
   environment:
     GOPATH: "{{ home }}/gocode"
     GO111MODULE: "on"
 
   tasks:
-    - name: terminate existing program
-      shell: "pkill {{ program }} || true"
-
     - name: create monitor directory
       file: path="~/{{ dir }}" state=directory mode=0755
 
-    - name: create monitor log directory
-      file: path="~/{{ dir }}/log" state=directory mode=0755
-
     - name: copy monitor config file
       template:
-        src: monitor.conf
+        src: "{{ config_file }}"
         dest: "{{ dir }}/{{ config_file }}"
 
     - name: udpate monitor program
-      shell: "{{ go_root_bin }}/go get -u github.com/jamieabc/{{ program }}"
+      shell: "/usr/local/go/bin/go get -u github.com/jamieabc/{{ program }}"
+      async: 30
+      poll: 10
+
+    - name: find running pid
+      shell: "ps -ef | grep -v grep | grep -w {{ program }} | awk '{print $2}'"
+      register: running_process
+
+    - name: kill process
+      shell: "kill {{ item }}"
+      with_items: "{{ running_process.stdout_lines }}"
+
+    - wait_for:
+        path: "/proc/{{ item }}/status"
+        state: absent
+        timeout: 31
+      with_items: "{{ running_process.stdout_lines }}"
+      ignore_errors: yes
+      register: force_kill_process
+
+    - name: force kill
+      ignore_errors: yes
+      shell: "kill -9 {{ item }}"
+      with_items: "{{ force_kill_process.results | select('failed') | map(attribute='item') | list }}"
 
     - name: start to monitor
-      shell: "{{ go_bin }}/{{ program }} -c {{ config_file }}"
+      shell: "nohup {{ home }}/gocode/bin/{{ program }} -c {{ config_file }} <{{ empty_char }} >{{ empty_char }} 2>&1 &"
       args:
         chdir: "{{ dir }}"
-      async: 45
-      poll: 0
