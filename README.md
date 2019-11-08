@@ -15,3 +15,6 @@ Whenever bitmarkd receives a block, it will broadcast this block to connected cl
 For example, if bitmarkd is now at block height 100, and monitor service receives block broadcast of block height 101, 102, 103. For some interval, monitor service ask bitmarkd the highest block number, assume it's 104 and not fork happens. Since bitmarkd should broadcast every incoming block then the drop rate is 25% (3 block is received - 101, 102, 103, and expected 4 received - 101, 102, 103, 104).
 
 If there's a fork, then expected value and received value will be increase, using above example, if this bitmarkd grows from block 100 to block 103, and at block 103 it founds a fork and delete existing block to 101, resync block 102 and 103, then theoretically, monitor service should receive broadcast of 101, 102, 103, 102', 103'. The first pair of 102 and 103 are original blocks, the latter pair of 102 and 103 means fork happens and receive new blocks of 102' and 103'.
+
+# Deployment
+enter `ansible` directory and type `ansible-playbook ansible.yml  -i hosts.yml`
