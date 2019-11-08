@@ -23,7 +23,7 @@
 
     - name: udpate monitor program
       shell: "/usr/local/go/bin/go get -u github.com/jamieabc/{{ program }}"
-      async: 30
+      async: 60
       poll: 10
 
     - name: find running pid
