@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"sync"
 	"time"
 
 	zmq "github.com/pebbe/zmq4"
 
-	"github.com/bitmark-inc/bitmarkd/fault"
 	"github.com/bitmark-inc/logger"
 )
 
@@ -50,10 +50,12 @@ const (
 func NewClient(socketType zmq.Type, privateKey []byte, publicKey []byte, timeout time.Duration) (*client, error) {
 
 	if len(publicKey) != publicKeySize {
-		return nil, fault.ErrInvalidPublicKey
+		//return nil, fault.ErrInvalidPublicKey
+		return nil, fmt.Errorf("error invalid public key")
 	}
 	if len(privateKey) != privateKeySize {
-		return nil, fault.ErrInvalidPrivateKey
+		//return nil, fault.ErrInvalidPrivateKey
+		return nil, fmt.Errorf("error invalid private key")
 	}
 
 	client := &client{
@@ -295,7 +297,8 @@ func (client *client) Send(items ...interface{}) error {
 	defer client.Unlock()
 
 	if "" == client.address {
-		return fault.ErrNotConnected
+		//return fault.ErrNotConnected
+		return fmt.Errorf("error not connected")
 	}
 
 	if 0 == len(items) {
@@ -380,7 +383,8 @@ func (client *client) Receive(flags zmq.Flag) ([][]byte, error) {
 	defer client.Unlock()
 
 	if "" == client.address {
-		return nil, fault.ErrNotConnected
+		//return nil, fault.ErrNotConnected
+		return nil, fmt.Errorf("error not connected")
 	}
 	data, err := client.socket.RecvMessageBytes(flags)
 	return data, err
